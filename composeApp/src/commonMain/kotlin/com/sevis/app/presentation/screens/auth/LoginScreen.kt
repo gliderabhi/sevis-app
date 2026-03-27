@@ -22,11 +22,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sevis.app.presentation.components.SevisButton
+import com.sevis.app.presentation.components.SevisLogo
 import com.sevis.app.presentation.components.SevisPasswordField
 import com.sevis.app.presentation.components.SevisTextField
 import com.sevis.app.presentation.viewmodel.AuthViewModel
+
+private fun validateEmail(email: String): String? = when {
+    email.isBlank()                              -> "Email is required"
+    !email.contains("@") || !email.contains(".") -> "Enter a valid email address"
+    else                                         -> null
+}
+
+private fun validatePassword(password: String): String? = when {
+    password.isBlank()   -> "Password is required"
+    password.length < 8  -> "Password must be at least 8 characters"
+    else                 -> null
+}
 
 @Composable
 fun LoginScreen(
@@ -36,8 +50,17 @@ fun LoginScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    // Pre-filled defaults for faster login during development
+    var email    by remember { mutableStateOf("admin@sevis.com") }
+    var password by remember { mutableStateOf("Admin@1234") }
+
+    // Track touched state — show errors only after first edit
+    var emailTouched    by remember { mutableStateOf(false) }
+    var passwordTouched by remember { mutableStateOf(false) }
+
+    val emailError    = if (emailTouched)    validateEmail(email)    else null
+    val passwordError = if (passwordTouched) validatePassword(password) else null
+    val formValid     = validateEmail(email) == null && validatePassword(password) == null
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -50,51 +73,49 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Sevis",
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Automobile & Transport Platform",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            SevisLogo(textSize = 32.sp)
 
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(32.dp))
 
             SevisTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = "Email",
-                keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next
+                value         = email,
+                onValueChange = { email = it; emailTouched = true },
+                label         = "Email",
+                keyboardType  = KeyboardType.Email,
+                imeAction     = ImeAction.Next,
+                isError       = emailError != null,
+                errorMessage  = emailError
             )
             Spacer(Modifier.height(12.dp))
             SevisPasswordField(
-                value = password,
-                onValueChange = { password = it },
-                imeAction = ImeAction.Done
+                value         = password,
+                onValueChange = { password = it; passwordTouched = true },
+                imeAction     = ImeAction.Done,
+                isError       = passwordError != null,
+                errorMessage  = passwordError
             )
 
             Spacer(Modifier.height(16.dp))
 
             if (state.error != null) {
                 Text(
-                    text = state.error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
+                    text     = state.error!!,
+                    color    = MaterialTheme.colorScheme.error,
+                    style    = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
             }
 
             SevisButton(
-                text = "Login",
-                onClick = { viewModel.login(email, password, onLoginSuccess) },
+                text    = "Login",
+                onClick = {
+                    emailTouched    = true
+                    passwordTouched = true
+                    if (formValid) viewModel.login(email, password, onLoginSuccess)
+                },
                 isLoading = state.isLoading,
-                enabled = email.isNotBlank() && password.isNotBlank()
+                enabled   = !state.isLoading
             )
 
             Spacer(Modifier.height(12.dp))

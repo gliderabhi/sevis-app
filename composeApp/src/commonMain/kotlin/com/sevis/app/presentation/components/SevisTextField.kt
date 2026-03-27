@@ -20,7 +20,9 @@ fun SevisTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Next,
     enabled: Boolean = true,
-    singleLine: Boolean = true
+    singleLine: Boolean = true,
+    isError: Boolean = false,
+    errorMessage: String? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -29,6 +31,10 @@ fun SevisTextField(
         modifier = modifier.fillMaxWidth(),
         singleLine = singleLine,
         enabled = enabled,
+        isError = isError,
+        supportingText = if (isError && errorMessage != null) {
+            { Text(errorMessage) }
+        } else null,
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType,
             imeAction = imeAction

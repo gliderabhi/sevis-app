@@ -28,7 +28,9 @@ fun SevisPasswordField(
     onValueChange: (String) -> Unit,
     label: String = "Password",
     modifier: Modifier = Modifier,
-    imeAction: ImeAction = ImeAction.Done
+    imeAction: ImeAction = ImeAction.Done,
+    isError: Boolean = false,
+    errorMessage: String? = null
 ) {
     var visible by remember { mutableStateOf(false) }
 
@@ -38,6 +40,10 @@ fun SevisPasswordField(
         label = { Text(label) },
         modifier = modifier.fillMaxWidth(),
         singleLine = true,
+        isError = isError,
+        supportingText = if (isError && errorMessage != null) {
+            { Text(errorMessage) }
+        } else null,
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Password,

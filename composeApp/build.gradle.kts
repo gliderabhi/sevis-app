@@ -35,8 +35,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.ktor.client.android)
             implementation(libs.kotlinx.coroutines.android)
-            implementation(libs.lifecycle.viewmodel.compose)
-            implementation(libs.lifecycle.runtime.compose)
+            implementation(libs.activity.compose)
         }
 
         commonMain.dependencies {
@@ -61,6 +60,8 @@ kotlin {
 
             // ViewModel (KMP-compatible)
             implementation(libs.lifecycle.viewmodel)
+            implementation(libs.lifecycle.viewmodel.compose)
+            implementation(libs.lifecycle.runtime.compose)
         }
 
         desktopMain.dependencies {

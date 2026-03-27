@@ -2,8 +2,8 @@ package com.sevis.app
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -28,6 +28,7 @@ import com.sevis.app.presentation.screens.BillingScreen
 import com.sevis.app.presentation.screens.InventoryScreen
 import com.sevis.app.presentation.screens.OrdersScreen
 import com.sevis.app.presentation.screens.UsersScreen
+import com.sevis.app.presentation.screens.SplashScreen
 import com.sevis.app.presentation.screens.auth.LoginScreen
 import com.sevis.app.presentation.screens.auth.SignupScreen
 import com.sevis.app.presentation.viewmodel.AuthViewModel
@@ -43,8 +44,14 @@ enum class MainScreen(val label: String) {
 @Composable
 fun App() {
     MaterialTheme {
-        var isLoggedIn by remember { mutableStateOf(TokenManager.isLoggedIn) }
-        var showSignup by remember { mutableStateOf(false) }
+        var showSplash  by remember { mutableStateOf(true) }
+        var isLoggedIn  by remember { mutableStateOf(TokenManager.isLoggedIn) }
+        var showSignup  by remember { mutableStateOf(false) }
+
+        if (showSplash) {
+            SplashScreen(onComplete = { showSplash = false })
+            return@MaterialTheme
+        }
 
         if (!isLoggedIn) {
             if (showSignup) {
@@ -70,7 +77,7 @@ fun App() {
                             IconButton(onClick = {
                                 authViewModel.logout { isLoggedIn = false }
                             }) {
-                                Icon(Icons.Default.Logout, contentDescription = "Logout")
+                                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout")
                             }
                         }
                     )
@@ -86,7 +93,7 @@ fun App() {
                         NavigationBarItem(
                             selected = currentScreen == MainScreen.Inventory,
                             onClick = { currentScreen = MainScreen.Inventory },
-                            icon = { Icon(Icons.Default.List, contentDescription = null) },
+                            icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
                             label = { Text(MainScreen.Inventory.label) }
                         )
                         NavigationBarItem(
