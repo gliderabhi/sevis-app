@@ -4,9 +4,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Receipt
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,9 +34,9 @@ import com.sevis.app.presentation.screens.auth.SignupScreen
 import com.sevis.app.presentation.viewmodel.AuthViewModel
 
 enum class MainScreen(val label: String) {
-    Users("Users"),
+    Users("Accounts"),
     Inventory("Inventory"),
-    Orders("Orders"),
+    Orders("Job Cards"),
     Billing("Billing")
 }
 
@@ -87,7 +87,7 @@ fun App() {
                         NavigationBarItem(
                             selected = currentScreen == MainScreen.Users,
                             onClick = { currentScreen = MainScreen.Users },
-                            icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
                             label = { Text(MainScreen.Users.label) }
                         )
                         NavigationBarItem(
@@ -99,7 +99,7 @@ fun App() {
                         NavigationBarItem(
                             selected = currentScreen == MainScreen.Orders,
                             onClick = { currentScreen = MainScreen.Orders },
-                            icon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) },
+                            icon = { Icon(Icons.Default.Assignment, contentDescription = null) },
                             label = { Text(MainScreen.Orders.label) }
                         )
                         NavigationBarItem(
