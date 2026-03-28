@@ -10,6 +10,8 @@ import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 
 class PartApiService(private val client: HttpClient) {
 
@@ -27,7 +29,14 @@ class PartApiService(private val client: HttpClient) {
                 // Content-Disposition: form-data; name="file"; filename="..."
                 // Without a filename, Tomcat treats the part as "parameter data" (not a file upload)
                 // and rejects it against the 2MB maxPostSize limit.
-                append("file", bytes, ContentType.Application.OctetStream, filename)
+                append(
+                    key   = "file",
+                    value = bytes,
+                    headers = Headers.build {
+                        append(HttpHeaders.ContentType, ContentType.Application.OctetStream.toString())
+                        append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"$filename\"")
+                    }
+                )
             }
         ) { bearerAuth() }.body()
 }
