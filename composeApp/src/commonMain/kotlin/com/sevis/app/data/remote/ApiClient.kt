@@ -8,9 +8,6 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
-// Gateway base URL — all services are routed through the gateway
-const val GATEWAY_BASE_URL = "http://localhost:8080"
-
 val httpClient = HttpClient {
     install(ContentNegotiation) {
         json(Json {

@@ -4,6 +4,7 @@ import com.sevis.app.data.model.AuthResponse
 import com.sevis.app.data.model.LoginRequest
 import com.sevis.app.data.model.SignupRequest
 import com.sevis.app.data.auth.TokenManager
+import com.sevis.app.data.config.Environment
 import io.ktor.client.call.body
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -15,20 +16,20 @@ import io.ktor.http.contentType
 class AuthApiService {
 
     suspend fun login(request: LoginRequest): AuthResponse =
-        httpClient.post("$GATEWAY_BASE_URL/user-service/api/auth/login") {
+        httpClient.post("${Environment.baseUrl}/user-service/api/auth/login") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
 
     suspend fun signup(request: SignupRequest): AuthResponse =
-        httpClient.post("$GATEWAY_BASE_URL/user-service/api/auth/signup") {
+        httpClient.post("${Environment.baseUrl}/user-service/api/auth/signup") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
 
     suspend fun logout() {
         TokenManager.token?.let { token ->
-            httpClient.post("$GATEWAY_BASE_URL/user-service/api/auth/logout") {
+            httpClient.post("${Environment.baseUrl}/user-service/api/auth/logout") {
                 header(HttpHeaders.Authorization, "Bearer $token")
             }
         }
