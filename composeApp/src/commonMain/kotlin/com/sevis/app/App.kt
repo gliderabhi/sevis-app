@@ -5,8 +5,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,7 +23,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sevis.app.data.auth.TokenManager
 import com.sevis.app.presentation.screens.BillingScreen
 import com.sevis.app.presentation.screens.InventoryScreen
@@ -31,7 +31,10 @@ import com.sevis.app.presentation.screens.UsersScreen
 import com.sevis.app.presentation.screens.SplashScreen
 import com.sevis.app.presentation.screens.auth.LoginScreen
 import com.sevis.app.presentation.screens.auth.SignupScreen
+import com.sevis.app.presentation.util.FilePicker
 import com.sevis.app.presentation.viewmodel.AuthViewModel
+import com.sevis.app.presentation.viewmodel.PartsViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 enum class MainScreen(val label: String) {
     Users("Accounts"),
@@ -66,14 +69,33 @@ fun App() {
                 )
             }
         } else {
-            val authViewModel: AuthViewModel = viewModel { AuthViewModel() }
+            val authViewModel: AuthViewModel = koinViewModel()
+            val partsViewModel: PartsViewModel = koinViewModel()
             var currentScreen by remember { mutableStateOf(MainScreen.Users) }
+            var showFilePicker by remember { mutableStateOf(false) }
+
+            FilePicker(
+                show = showFilePicker,
+                onFilePicked = { name, bytes ->
+                    showFilePicker = false
+                    partsViewModel.importCsv(bytes, name)
+                },
+                onDismiss = { showFilePicker = false }
+            )
 
             Scaffold(
                 topBar = {
                     TopAppBar(
                         title = { Text(currentScreen.label) },
                         actions = {
+                            if (currentScreen == MainScreen.Inventory) {
+                                IconButton(
+                                    onClick = { showFilePicker = true },
+                                    enabled = !partsViewModel.state.value.isImporting
+                                ) {
+                                    Icon(Icons.Default.Upload, contentDescription = "Import CSV")
+                                }
+                            }
                             IconButton(onClick = {
                                 authViewModel.logout { isLoggedIn = false }
                             }) {
@@ -99,7 +121,7 @@ fun App() {
                         NavigationBarItem(
                             selected = currentScreen == MainScreen.Orders,
                             onClick = { currentScreen = MainScreen.Orders },
-                            icon = { Icon(Icons.Default.Assignment, contentDescription = null) },
+                            icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null) },
                             label = { Text(MainScreen.Orders.label) }
                         )
                         NavigationBarItem(
