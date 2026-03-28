@@ -7,7 +7,7 @@ import com.sevis.app.presentation.BaseViewModel
 import kotlinx.coroutines.launch
 
 class AuthViewModel(
-    private val repository: AuthRepository = AuthRepository()
+    private val repository: AuthRepository
 ) : BaseViewModel<Unit>() {
 
     fun login(email: String, password: String, onSuccess: () -> Unit) {

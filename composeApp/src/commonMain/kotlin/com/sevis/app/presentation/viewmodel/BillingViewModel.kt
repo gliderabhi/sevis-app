@@ -7,7 +7,7 @@ import com.sevis.app.presentation.BaseViewModel
 import kotlinx.coroutines.launch
 
 class BillingViewModel(
-    private val repository: BillingRepository = BillingRepository()
+    private val repository: BillingRepository
 ) : BaseViewModel<List<Bill>>() {
 
     init {

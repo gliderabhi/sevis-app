@@ -3,7 +3,7 @@ package com.sevis.app.data.repository
 import com.sevis.app.data.model.Order
 import com.sevis.app.data.remote.OrdersApiService
 
-class OrdersRepository(private val api: OrdersApiService = OrdersApiService()) {
+class OrdersRepository(private val api: OrdersApiService) {
 
     suspend fun getAll(): Result<List<Order>> = runCatching { api.getAll() }
 

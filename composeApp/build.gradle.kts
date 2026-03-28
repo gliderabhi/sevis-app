@@ -36,6 +36,7 @@ kotlin {
             implementation(libs.ktor.client.android)
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.activity.compose)
+            implementation(libs.koin.android)
         }
 
         commonMain.dependencies {
@@ -62,6 +63,11 @@ kotlin {
             implementation(libs.lifecycle.viewmodel)
             implementation(libs.lifecycle.viewmodel.compose)
             implementation(libs.lifecycle.runtime.compose)
+
+            // Koin — KMP dependency injection
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
         }
 
         desktopMain.dependencies {

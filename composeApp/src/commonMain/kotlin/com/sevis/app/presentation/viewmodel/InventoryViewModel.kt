@@ -7,7 +7,7 @@ import com.sevis.app.presentation.BaseViewModel
 import kotlinx.coroutines.launch
 
 class InventoryViewModel(
-    private val repository: InventoryRepository = InventoryRepository()
+    private val repository: InventoryRepository
 ) : BaseViewModel<List<InventoryItem>>() {
 
     init {

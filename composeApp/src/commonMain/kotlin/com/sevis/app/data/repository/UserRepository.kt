@@ -3,7 +3,7 @@ package com.sevis.app.data.repository
 import com.sevis.app.data.model.User
 import com.sevis.app.data.remote.UserApiService
 
-class UserRepository(private val api: UserApiService = UserApiService()) {
+class UserRepository(private val api: UserApiService) {
 
     suspend fun getAll(): Result<List<User>> = runCatching { api.getAll() }
 

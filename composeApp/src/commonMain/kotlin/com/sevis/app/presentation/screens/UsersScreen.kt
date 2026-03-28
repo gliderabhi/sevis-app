@@ -21,14 +21,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sevis.app.presentation.viewmodel.UserViewModel
 import androidx.compose.material3.Icon
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun UsersScreen(
     modifier: Modifier = Modifier,
-    viewModel: UserViewModel = viewModel { UserViewModel() }
+    viewModel: UserViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 

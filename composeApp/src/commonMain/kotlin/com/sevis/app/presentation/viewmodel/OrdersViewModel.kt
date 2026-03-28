@@ -7,7 +7,7 @@ import com.sevis.app.presentation.BaseViewModel
 import kotlinx.coroutines.launch
 
 class OrdersViewModel(
-    private val repository: OrdersRepository = OrdersRepository()
+    private val repository: OrdersRepository
 ) : BaseViewModel<List<Order>>() {
 
     init {

@@ -9,8 +9,17 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.sevis.app.di.appModules
+import org.koin.core.context.GlobalContext
+import org.koin.core.context.startKoin
 
 fun main() = application {
+    if (GlobalContext.getOrNull() == null) {
+        startKoin {
+            modules(appModules)
+        }
+    }
+
     val viewModelStoreOwner = object : ViewModelStoreOwner {
         override val viewModelStore = ViewModelStore()
     }

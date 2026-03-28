@@ -3,7 +3,7 @@ package com.sevis.app.data.repository
 import com.sevis.app.data.model.InventoryItem
 import com.sevis.app.data.remote.InventoryApiService
 
-class InventoryRepository(private val api: InventoryApiService = InventoryApiService()) {
+class InventoryRepository(private val api: InventoryApiService) {
 
     suspend fun getAll(): Result<List<InventoryItem>> = runCatching { api.getAll() }
 

@@ -88,7 +88,7 @@ fun App() {
                     TopAppBar(
                         title = { Text(currentScreen.label) },
                         actions = {
-                            if (currentScreen == MainScreen.Inventory) {
+                            if (currentScreen == MainScreen.Inventory && TokenManager.isAdmin) {
                                 IconButton(
                                     onClick = { showFilePicker = true },
                                     enabled = !partsViewModel.state.value.isImporting

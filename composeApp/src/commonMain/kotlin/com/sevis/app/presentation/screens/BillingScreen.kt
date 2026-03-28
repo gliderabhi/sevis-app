@@ -20,13 +20,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sevis.app.presentation.viewmodel.BillingViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun BillingScreen(
     modifier: Modifier = Modifier,
-    viewModel: BillingViewModel = viewModel { BillingViewModel() }
+    viewModel: BillingViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 

@@ -25,7 +25,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.compose.viewmodel.koinViewModel
 import com.sevis.app.presentation.components.SevisButton
 import com.sevis.app.presentation.components.SevisDropdownField
 import com.sevis.app.presentation.components.SevisLogo
@@ -74,7 +74,7 @@ private fun validateCompanyName(v: String, accountType: String): String? = when 
 fun SignupScreen(
     onSignupSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    viewModel: AuthViewModel = viewModel { AuthViewModel() }
+    viewModel: AuthViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 

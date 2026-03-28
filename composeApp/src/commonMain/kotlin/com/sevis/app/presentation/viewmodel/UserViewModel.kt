@@ -7,7 +7,7 @@ import com.sevis.app.presentation.BaseViewModel
 import kotlinx.coroutines.launch
 
 class UserViewModel(
-    private val repository: UserRepository = UserRepository()
+    private val repository: UserRepository
 ) : BaseViewModel<List<User>>() {
 
     init {
