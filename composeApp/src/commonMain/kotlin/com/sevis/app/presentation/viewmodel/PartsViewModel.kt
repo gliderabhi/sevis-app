@@ -133,14 +133,8 @@ class PartsViewModel(
     // ── CSV / TSV parser ──────────────────────────────────────────────────────
 
     private fun parseRows(bytes: ByteArray): List<PartBatchRow> {
-        // Strip UTF-8 BOM if present (EF BB BF)
-        val stripped = if (bytes.size >= 3 &&
-            bytes[0] == 0xEF.toByte() &&
-            bytes[1] == 0xBB.toByte() &&
-            bytes[2] == 0xBF.toByte()
-        ) bytes.copyOfRange(3, bytes.size) else bytes
-
-        val lines = stripped.decodeToString().lines()
+        val content = decodeBytes(bytes)
+        val lines = content.lines()
         if (lines.size < 2) return emptyList()
 
         // Auto-detect separator: prefer tab, fall back to comma
@@ -149,6 +143,30 @@ class PartsViewModel(
         return lines.drop(1)
             .filter { it.isNotBlank() }
             .mapNotNull { parseLine(it, sep) }
+    }
+
+    private fun decodeBytes(bytes: ByteArray): String = when {
+        // UTF-16 LE BOM: FF FE
+        bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte() -> {
+            val data = bytes.copyOfRange(2, bytes.size)
+            val chars = CharArray(data.size / 2) { i ->
+                ((data[i * 2].toInt() and 0xFF) or ((data[i * 2 + 1].toInt() and 0xFF) shl 8)).toChar()
+            }
+            String(chars)
+        }
+        // UTF-16 BE BOM: FE FF
+        bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte() -> {
+            val data = bytes.copyOfRange(2, bytes.size)
+            val chars = CharArray(data.size / 2) { i ->
+                (((data[i * 2].toInt() and 0xFF) shl 8) or (data[i * 2 + 1].toInt() and 0xFF)).toChar()
+            }
+            String(chars)
+        }
+        // UTF-8 BOM: EF BB BF
+        bytes.size >= 3 && bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte() ->
+            bytes.copyOfRange(3, bytes.size).decodeToString()
+        // Default UTF-8
+        else -> bytes.decodeToString()
     }
 
     private fun parseLine(line: String, sep: Char): PartBatchRow? {
