@@ -1,0 +1,4 @@
+com.sevis.app.test.composeApp-androidTest-0 /Users/prashantsharma/Documents/projects/sevis/sevis-app/composeApp/build/generated/res/resValues/androidTest/debug
+com.sevis.app.test.composeApp-mergeDebugAndroidTestResources-1 /Users/prashantsharma/Documents/projects/sevis/sevis-app/composeApp/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/merged.dir
+com.sevis.app.test.composeApp-mergeDebugAndroidTestResources-2 /Users/prashantsharma/Documents/projects/sevis/sevis-app/composeApp/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/stripped.dir
+com.sevis.app.test.composeApp-merged_res-3 /Users/prashantsharma/Documents/projects/sevis/sevis-app/composeApp/build/intermediates/merged_res/debugAndroidTest

@@ -52,60 +52,64 @@ class UserApiService {
 
 class InventoryApiService {
     suspend fun getAll(): List<InventoryItem> =
-        httpClient.get("${Environment.baseUrl}/inventory-service/api/inventory").body()
+        httpClient.get("${Environment.baseUrl}/inventory-service/api/inventory") { bearerAuth() }.body()
 
     suspend fun getById(id: Long): InventoryItem =
-        httpClient.get("${Environment.baseUrl}/inventory-service/api/inventory/$id").body()
+        httpClient.get("${Environment.baseUrl}/inventory-service/api/inventory/$id") { bearerAuth() }.body()
 
     suspend fun create(item: InventoryItem): InventoryItem =
         httpClient.post("${Environment.baseUrl}/inventory-service/api/inventory") {
             contentType(ContentType.Application.Json)
             setBody(item)
+            bearerAuth()
         }.body()
 
     suspend fun update(id: Long, item: InventoryItem): InventoryItem =
         httpClient.put("${Environment.baseUrl}/inventory-service/api/inventory/$id") {
             contentType(ContentType.Application.Json)
             setBody(item)
+            bearerAuth()
         }.body()
 
     suspend fun delete(id: Long) =
-        httpClient.delete("${Environment.baseUrl}/inventory-service/api/inventory/$id")
+        httpClient.delete("${Environment.baseUrl}/inventory-service/api/inventory/$id") { bearerAuth() }
 }
 
 class BillingApiService {
     suspend fun getAll(): List<Bill> =
-        httpClient.get("${Environment.baseUrl}/billing-service/api/bills").body()
+        httpClient.get("${Environment.baseUrl}/billing-service/api/bills") { bearerAuth() }.body()
 
     suspend fun getById(id: Long): Bill =
-        httpClient.get("${Environment.baseUrl}/billing-service/api/bills/$id").body()
+        httpClient.get("${Environment.baseUrl}/billing-service/api/bills/$id") { bearerAuth() }.body()
 
     suspend fun getByUserId(userId: Long): List<Bill> =
-        httpClient.get("${Environment.baseUrl}/billing-service/api/bills/user/$userId").body()
+        httpClient.get("${Environment.baseUrl}/billing-service/api/bills/user/$userId") { bearerAuth() }.body()
 
     suspend fun create(bill: Bill): Bill =
         httpClient.post("${Environment.baseUrl}/billing-service/api/bills") {
             contentType(ContentType.Application.Json)
             setBody(bill)
+            bearerAuth()
         }.body()
 }
 
 class OrdersApiService {
     suspend fun getAll(): List<Order> =
-        httpClient.get("${Environment.baseUrl}/orders-service/api/orders").body()
+        httpClient.get("${Environment.baseUrl}/orders-service/api/orders") { bearerAuth() }.body()
 
     suspend fun getById(id: Long): Order =
-        httpClient.get("${Environment.baseUrl}/orders-service/api/orders/$id").body()
+        httpClient.get("${Environment.baseUrl}/orders-service/api/orders/$id") { bearerAuth() }.body()
 
     suspend fun getByUserId(userId: Long): List<Order> =
-        httpClient.get("${Environment.baseUrl}/orders-service/api/orders/user/$userId").body()
+        httpClient.get("${Environment.baseUrl}/orders-service/api/orders/user/$userId") { bearerAuth() }.body()
 
     suspend fun create(order: Order): Order =
         httpClient.post("${Environment.baseUrl}/orders-service/api/orders") {
             contentType(ContentType.Application.Json)
             setBody(order)
+            bearerAuth()
         }.body()
 
     suspend fun updateStatus(id: Long, status: String): Order =
-        httpClient.put("${Environment.baseUrl}/orders-service/api/orders/$id/status?status=$status").body()
+        httpClient.put("${Environment.baseUrl}/orders-service/api/orders/$id/status?status=$status") { bearerAuth() }.body()
 }

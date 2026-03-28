@@ -79,10 +79,10 @@ fun SignupScreen(
     val state by viewModel.uiState.collectAsState()
 
     // Pre-filled defaults for faster signup during development
-    var name        by remember { mutableStateOf("John Doe") }
-    var email       by remember { mutableStateOf("john@example.com") }
+    var name        by remember { mutableStateOf("Admin") }
+    var email       by remember { mutableStateOf("admin@sevis.com") }
     var phone       by remember { mutableStateOf("9876543210") }
-    var password    by remember { mutableStateOf("Test@1234") }
+    var password    by remember { mutableStateOf("Admin@1234") }
     var role        by remember { mutableStateOf(roles.first()) }
     var accountType by remember { mutableStateOf(accountTypes.first()) }
     var companyName by remember { mutableStateOf("") }
