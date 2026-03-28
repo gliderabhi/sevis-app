@@ -1,4 +1,0 @@
-#Sat Mar 28 03:35:36 IST 2026
-base.0=/Users/prashantsharma/Documents/projects/sevis/sevis-app/composeApp/build/intermediates/dex/debugAndroidTest/mergeProjectDexDebugAndroidTest/0/classes.dex
-path.0=0/classes.dex
-renamed.0=classes.dex
