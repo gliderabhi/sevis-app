@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sevis.app.data.model.ImportResult
 import com.sevis.app.data.model.Part
+import com.sevis.app.data.model.PartBatchRow
 import com.sevis.app.data.repository.PartRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,8 @@ data class PartsState(
     val hasMore: Boolean = true,
     val currentPage: Int = 0,
     val isImporting: Boolean = false,
+    val importProgress: Int = 0,
+    val importTotal: Int = 0,
     val importResult: ImportResult? = null,
     val importError: String? = null
 )
@@ -28,6 +31,7 @@ class PartsViewModel(
 
     companion object {
         private const val PAGE_SIZE = 20
+        private const val UPLOAD_BATCH = 150
     }
 
     private val _state = MutableStateFlow(PartsState())
@@ -40,11 +44,8 @@ class PartsViewModel(
     fun loadFirstPage() {
         viewModelScope.launch {
             _state.value = _state.value.copy(
-                isLoading = true,
-                error = null,
-                parts = emptyList(),
-                hasMore = true,
-                currentPage = 0
+                isLoading = true, error = null,
+                parts = emptyList(), hasMore = true, currentPage = 0
             )
             repository.getParts(0, PAGE_SIZE)
                 .onSuccess { response ->
@@ -56,10 +57,7 @@ class PartsViewModel(
                     )
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        error = e.message ?: "Failed to load parts"
-                    )
+                    _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed to load parts")
                 }
         }
     }
@@ -67,7 +65,6 @@ class PartsViewModel(
     fun loadNextPage() {
         val current = _state.value
         if (current.isLoadingMore || !current.hasMore) return
-
         val nextPage = current.currentPage + 1
         viewModelScope.launch {
             _state.value = current.copy(isLoadingMore = true)
@@ -81,32 +78,100 @@ class PartsViewModel(
                     )
                 }
                 .onFailure { e ->
-                    _state.value = current.copy(
-                        isLoadingMore = false,
-                        error = e.message ?: "Failed to load more parts"
-                    )
+                    _state.value = current.copy(isLoadingMore = false, error = e.message ?: "Failed to load more parts")
                 }
         }
     }
 
     fun importCsv(bytes: ByteArray, filename: String) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isImporting = true, importResult = null, importError = null)
-            repository.importCsv(bytes, filename)
-                .onSuccess { result ->
-                    _state.value = _state.value.copy(isImporting = false, importResult = result)
-                    loadFirstPage()
+            _state.value = _state.value.copy(
+                isImporting = true, importResult = null, importError = null,
+                importProgress = 0, importTotal = 0
+            )
+
+            val rows = parseRows(bytes)
+            if (rows.isEmpty()) {
+                _state.value = _state.value.copy(isImporting = false, importError = "No valid rows found in file")
+                return@launch
+            }
+
+            _state.value = _state.value.copy(importTotal = rows.size)
+
+            var totalInserted = 0
+            var totalUpdated  = 0
+            var totalSkipped  = 0
+
+            try {
+                for (batch in rows.chunked(UPLOAD_BATCH)) {
+                    repository.importBatch(batch)
+                        .onSuccess { result ->
+                            totalInserted += result.inserted
+                            totalUpdated  += result.updated
+                            totalSkipped  += result.skipped
+                            _state.value = _state.value.copy(
+                                importProgress = totalInserted + totalUpdated + totalSkipped
+                            )
+                        }
+                        .onFailure { throw it }
                 }
-                .onFailure { e ->
-                    _state.value = _state.value.copy(
-                        isImporting = false,
-                        importError = e.message ?: "Import failed"
-                    )
-                }
+                _state.value = _state.value.copy(
+                    isImporting = false,
+                    importResult = ImportResult(totalInserted, totalUpdated, totalSkipped, "Import complete")
+                )
+                loadFirstPage()
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(isImporting = false, importError = e.message ?: "Import failed")
+            }
         }
     }
 
     fun clearImportResult() {
-        _state.value = _state.value.copy(importResult = null, importError = null)
+        _state.value = _state.value.copy(importResult = null, importError = null, importProgress = 0, importTotal = 0)
     }
+
+    // ── CSV / TSV parser ──────────────────────────────────────────────────────
+
+    private fun parseRows(bytes: ByteArray): List<PartBatchRow> {
+        // Strip UTF-8 BOM if present (EF BB BF)
+        val stripped = if (bytes.size >= 3 &&
+            bytes[0] == 0xEF.toByte() &&
+            bytes[1] == 0xBB.toByte() &&
+            bytes[2] == 0xBF.toByte()
+        ) bytes.copyOfRange(3, bytes.size) else bytes
+
+        val lines = stripped.decodeToString().lines()
+        if (lines.size < 2) return emptyList()
+
+        // Auto-detect separator: prefer tab, fall back to comma
+        val sep = if (lines[0].contains('\t')) '\t' else ','
+
+        return lines.drop(1)
+            .filter { it.isNotBlank() }
+            .mapNotNull { parseLine(it, sep) }
+    }
+
+    private fun parseLine(line: String, sep: Char): PartBatchRow? {
+        val cols = line.split(sep)
+        if (cols.size < 2) return null
+
+        val partNumber  = cols[0].clean()
+        val description = cols[1].clean()
+        if (partNumber.isBlank() || description.isBlank()) return null
+        if (partNumber.any { it.code < 32 }) return null   // reject control chars
+
+        return PartBatchRow(
+            partNumber    = partNumber,
+            description   = description,
+            mrpPrice      = cols.getOrNull(2)?.parsePrice() ?: 0.0,
+            purchasePrice = cols.getOrNull(3)?.parsePrice() ?: 0.0,
+            uom           = cols.getOrNull(6)?.clean() ?: "",
+            productGroup  = cols.getOrNull(7)?.clean() ?: "",
+            hsnCode       = cols.getOrNull(8)?.clean() ?: "",
+            taxSlab       = cols.getOrNull(9)?.clean() ?: ""
+        )
+    }
+
+    private fun String.clean() = trim().removePrefix("\"").removeSuffix("\"").trim()
+    private fun String.parsePrice() = clean().replace("Rs.", "").replace(",", "").trim().toDoubleOrNull() ?: 0.0
 }

@@ -165,7 +165,22 @@ private fun CatalogueTab(viewModel: PartsViewModel) {
         }
 
         if (state.isImporting) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
+            Column(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter)) {
+                if (state.importTotal > 0) {
+                    LinearProgressIndicator(
+                        progress = { state.importProgress.toFloat() / state.importTotal },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        "${state.importProgress} / ${state.importTotal} rows",
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+            }
         }
 
         snackbarMessage?.let { message ->
