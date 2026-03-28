@@ -24,8 +24,10 @@ class PartApiService(private val client: HttpClient) {
         client.submitFormWithBinaryData(
             url = "${Environment.baseUrl}/inventory-service/api/parts/import",
             formData = formData {
+                // Do NOT manually add Content-Disposition here — Ktor already generates
+                // "form-data; name=\"file\"" automatically. Adding it again creates
+                // duplicate headers that Spring's strict parser rejects.
                 append("file", bytes, Headers.build {
-                    append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"$filename\"")
                     append(HttpHeaders.ContentType, "application/octet-stream")
                 })
             }
