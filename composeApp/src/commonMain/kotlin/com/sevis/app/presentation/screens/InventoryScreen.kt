@@ -1,6 +1,7 @@
 package com.sevis.app.presentation.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -72,9 +75,11 @@ fun InventoryScreen(
             Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("My Stock") })
         }
 
+        val partsState by partsViewModel.state.collectAsState()
+
         when (selectedTab) {
             0 -> CatalogueTab(viewModel = partsViewModel)
-            1 -> StockTab(viewModel = stockViewModel)
+            1 -> StockTab(viewModel = stockViewModel, catalogueParts = partsState.parts)
         }
     }
 }
@@ -179,12 +184,13 @@ private fun CatalogueTab(viewModel: PartsViewModel) {
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun StockTab(viewModel: StockViewModel) {
+private fun StockTab(viewModel: StockViewModel, catalogueParts: List<Part>) {
     val state by viewModel.state.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
     if (showAddDialog) {
         AddStockDialog(
+            catalogueParts = catalogueParts,
             onConfirm = { partNumber, qty, price ->
                 showAddDialog = false
                 viewModel.upsert(partNumber, qty, price)
@@ -245,25 +251,103 @@ private fun StockTab(viewModel: StockViewModel) {
 
 @Composable
 private fun AddStockDialog(
+    catalogueParts: List<Part>,
     onConfirm: (partNumber: String, quantity: Int, purchasePrice: Double?) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var partNumber by remember { mutableStateOf("") }
-    var quantity   by remember { mutableStateOf("") }
-    var price      by remember { mutableStateOf("") }
+    var query        by remember { mutableStateOf("") }
+    var selectedPart by remember { mutableStateOf<Part?>(null) }
+    var quantity     by remember { mutableStateOf("") }
+    var price        by remember { mutableStateOf("") }
+
+    val suggestions = remember(query, selectedPart) {
+        if (selectedPart != null || query.length < 2) emptyList()
+        else {
+            val q = query.uppercase()
+            catalogueParts.filter {
+                it.partNumber.contains(q, ignoreCase = true) ||
+                it.description.contains(q, ignoreCase = true)
+            }.take(6)
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add / Update Stock") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = partNumber,
-                    onValueChange = { partNumber = it.uppercase() },
-                    label = { Text("Part Number") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+
+                // Part picker
+                if (selectedPart == null) {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = { Text("Search Part Number or Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (catalogueParts.isEmpty()) {
+                        Text(
+                            "Parts catalogue is empty — upload a CSV first",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else if (query.length >= 2 && suggestions.isEmpty()) {
+                        Text(
+                            "No matching parts found",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (suggestions.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            tonalElevation = 4.dp,
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)
+                        ) {
+                            LazyColumn {
+                                items(suggestions) { part ->
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { selectedPart = part; query = part.partNumber }
+                                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                                    ) {
+                                        Text(part.partNumber, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                        if (part.description.isNotBlank()) {
+                                            Text(part.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Selected part chip with clear button
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(selectedPart!!.partNumber, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                if (selectedPart!!.description.isNotBlank()) {
+                                    Text(selectedPart!!.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                }
+                            }
+                            IconButton(onClick = { selectedPart = null; query = "" }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = quantity,
                     onValueChange = { quantity = it },
@@ -286,10 +370,9 @@ private fun AddStockDialog(
             Button(
                 onClick = {
                     val qty = quantity.toIntOrNull() ?: 0
-                    val p   = price.toDoubleOrNull()
-                    onConfirm(partNumber.trim(), qty, p)
+                    onConfirm(selectedPart!!.partNumber, qty, price.toDoubleOrNull())
                 },
-                enabled = partNumber.isNotBlank() && quantity.isNotBlank()
+                enabled = selectedPart != null && quantity.isNotBlank()
             ) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }

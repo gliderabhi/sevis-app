@@ -9,8 +9,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
-import io.ktor.http.Headers
-import io.ktor.http.HttpHeaders
+import io.ktor.http.ContentType
 
 class PartApiService(private val client: HttpClient) {
 
@@ -24,12 +23,11 @@ class PartApiService(private val client: HttpClient) {
         client.submitFormWithBinaryData(
             url = "${Environment.baseUrl}/inventory-service/api/parts/import",
             formData = formData {
-                // Do NOT manually add Content-Disposition here — Ktor already generates
-                // "form-data; name=\"file\"" automatically. Adding it again creates
-                // duplicate headers that Spring's strict parser rejects.
-                append("file", bytes, Headers.build {
-                    append(HttpHeaders.ContentType, "application/octet-stream")
-                })
+                // Use the (key, bytes, contentType, filename) overload so Ktor generates a single
+                // Content-Disposition: form-data; name="file"; filename="..."
+                // Without a filename, Tomcat treats the part as "parameter data" (not a file upload)
+                // and rejects it against the 2MB maxPostSize limit.
+                append("file", bytes, ContentType.Application.OctetStream, filename)
             }
         ) { bearerAuth() }.body()
 }
