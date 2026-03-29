@@ -36,6 +36,19 @@ import com.sevis.app.presentation.viewmodel.AuthViewModel
 private val roles        = listOf("DEALER", "CUSTOMER")
 private val accountTypes = listOf("INDIVIDUAL", "COMPANY")
 
+private fun validateGstNo(v: String): String? = when {
+    v.isBlank() -> "GST number is required for dealers"
+    !v.matches(Regex("^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]\$")) ->
+        "Invalid format (e.g. 22AAAAA0000A1Z5)"
+    else -> null
+}
+
+private fun validatePinCode(v: String): String? = when {
+    v.isBlank() -> "Pincode is required"
+    !v.matches(Regex("^[1-9][0-9]{5}\$")) -> "Enter a valid 6-digit pincode"
+    else -> null
+}
+
 private fun validateName(v: String): String? = when {
     v.isBlank()  -> "Full name is required"
     v.length < 2 -> "Name must be at least 2 characters"
@@ -86,6 +99,12 @@ fun SignupScreen(
     var role        by remember { mutableStateOf(roles.first()) }
     var accountType by remember { mutableStateOf(accountTypes.first()) }
     var companyName by remember { mutableStateOf("") }
+    var gstNo        by remember { mutableStateOf("") }
+    var address      by remember { mutableStateOf("") }
+    var city         by remember { mutableStateOf("") }
+    var stateField   by remember { mutableStateOf("") }
+    var pinCode      by remember { mutableStateOf("") }
+    var dealerCode   by remember { mutableStateOf("") }
 
     // Touched flags — validate only after first edit
     var nameTouched        by remember { mutableStateOf(false) }
@@ -93,18 +112,24 @@ fun SignupScreen(
     var phoneTouched       by remember { mutableStateOf(false) }
     var passwordTouched    by remember { mutableStateOf(false) }
     var companyNameTouched by remember { mutableStateOf(false) }
+    var gstNoTouched       by remember { mutableStateOf(false) }
+    var pinCodeTouched     by remember { mutableStateOf(false) }
 
-    val nameError        = if (nameTouched)        validateName(name)                         else null
-    val emailError       = if (emailTouched)       validateEmail(email)                       else null
-    val phoneError       = if (phoneTouched)       validatePhone(phone)                       else null
-    val passwordError    = if (passwordTouched)    validatePassword(password)                 else null
+    val nameError        = if (nameTouched)        validateName(name)                            else null
+    val emailError       = if (emailTouched)       validateEmail(email)                          else null
+    val phoneError       = if (phoneTouched)       validatePhone(phone)                          else null
+    val passwordError    = if (passwordTouched)    validatePassword(password)                    else null
     val companyNameError = if (companyNameTouched) validateCompanyName(companyName, accountType) else null
+    val gstNoError       = if (gstNoTouched && role == "DEALER") validateGstNo(gstNo)            else null
+    val pinCodeError     = if (pinCodeTouched && role == "DEALER" && pinCode.isNotBlank()) validatePinCode(pinCode) else null
 
     val formValid = validateName(name) == null &&
             validateEmail(email) == null &&
             validatePhone(phone) == null &&
             validatePassword(password) == null &&
-            validateCompanyName(companyName, accountType) == null
+            validateCompanyName(companyName, accountType) == null &&
+            (role != "DEALER" || validateGstNo(gstNo) == null) &&
+            (role != "DEALER" || pinCode.isBlank() || validatePinCode(pinCode) == null)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -180,6 +205,50 @@ fun SignupScreen(
                 )
             }
 
+            if (role == "DEALER") {
+                Spacer(Modifier.height(12.dp))
+                SevisTextField(
+                    value         = gstNo,
+                    onValueChange = { gstNo = it.uppercase(); gstNoTouched = true },
+                    label         = "GST Number *",
+                    isError       = gstNoError != null,
+                    errorMessage  = gstNoError
+                )
+                Spacer(Modifier.height(12.dp))
+                SevisTextField(
+                    value         = address,
+                    onValueChange = { address = it },
+                    label         = "Address"
+                )
+                Spacer(Modifier.height(12.dp))
+                SevisTextField(
+                    value         = city,
+                    onValueChange = { city = it },
+                    label         = "City"
+                )
+                Spacer(Modifier.height(12.dp))
+                SevisTextField(
+                    value         = stateField,
+                    onValueChange = { stateField = it },
+                    label         = "State"
+                )
+                Spacer(Modifier.height(12.dp))
+                SevisTextField(
+                    value         = pinCode,
+                    onValueChange = { pinCode = it; pinCodeTouched = true },
+                    label         = "Pincode",
+                    keyboardType  = KeyboardType.Number,
+                    isError       = pinCodeError != null,
+                    errorMessage  = pinCodeError
+                )
+                Spacer(Modifier.height(12.dp))
+                SevisTextField(
+                    value         = dealerCode,
+                    onValueChange = { dealerCode = it },
+                    label         = "Dealer Code (optional)"
+                )
+            }
+
             Spacer(Modifier.height(16.dp))
 
             if (state.error != null) {
@@ -199,6 +268,7 @@ fun SignupScreen(
                     nameTouched = true; emailTouched = true
                     phoneTouched = true; passwordTouched = true
                     if (accountType == "COMPANY") companyNameTouched = true
+                    if (role == "DEALER") { gstNoTouched = true; pinCodeTouched = true }
                     if (formValid) viewModel.signup(
                         name        = name,
                         email       = email,
@@ -207,6 +277,12 @@ fun SignupScreen(
                         role        = role,
                         accountType = accountType,
                         companyName = companyName.ifBlank { null },
+                        gstNo       = if (role == "DEALER") gstNo.ifBlank { null } else null,
+                        address     = if (role == "DEALER") address.ifBlank { null } else null,
+                        city        = if (role == "DEALER") city.ifBlank { null } else null,
+                        state       = if (role == "DEALER") stateField.ifBlank { null } else null,
+                        pinCode     = if (role == "DEALER") pinCode.ifBlank { null } else null,
+                        dealerCode  = if (role == "DEALER") dealerCode.ifBlank { null } else null,
                         onSuccess   = onSignupSuccess
                     )
                 },

@@ -16,7 +16,13 @@ data class SignupRequest(
     val password: String,
     val role: String,
     val accountType: String,
-    val companyName: String? = null
+    val companyName: String? = null,
+    val gstNo: String? = null,
+    val address: String? = null,
+    val city: String? = null,
+    val state: String? = null,
+    val pinCode: String? = null,
+    val dealerCode: String? = null
 )
 
 @Serializable
@@ -28,5 +34,11 @@ data class AuthResponse(
     val email: String? = null,
     val role: String? = null,
     val accountType: String? = null,
-    val companyName: String? = null
+    val companyName: String? = null,
+    val gstNo: String? = null,
+    val address: String? = null,
+    val city: String? = null,
+    val state: String? = null,
+    val pinCode: String? = null,
+    val dealerCode: String? = null
 )

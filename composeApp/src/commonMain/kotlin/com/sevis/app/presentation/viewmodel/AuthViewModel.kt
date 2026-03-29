@@ -30,11 +30,20 @@ class AuthViewModel(
         role: String,
         accountType: String,
         companyName: String? = null,
+        gstNo: String? = null,
+        address: String? = null,
+        city: String? = null,
+        state: String? = null,
+        pinCode: String? = null,
+        dealerCode: String? = null,
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             setLoading()
-            repository.signup(SignupRequest(name, email, phone, password, role, accountType, companyName))
+            repository.signup(SignupRequest(
+                name, email, phone, password, role, accountType, companyName,
+                gstNo, address, city, state, pinCode, dealerCode
+            ))
                 .onSuccess {
                     setData(Unit)
                     onSuccess()
