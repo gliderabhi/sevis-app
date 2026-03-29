@@ -4,11 +4,8 @@ import com.sevis.app.data.config.Environment
 import com.sevis.app.data.model.StockItem
 import com.sevis.app.data.model.StockRequest
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.delete
-import io.ktor.client.request.get
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
+import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 
@@ -16,22 +13,43 @@ private const val BASE = "/inventory-service/api/stock"
 
 class StockApiService(private val client: HttpClient) {
 
+    // ✅ GET ALL (with optional query param)
     suspend fun getAll(companyId: Long? = null): List<StockItem> {
-        val url = if (companyId != null) "${Environment.baseUrl}$BASE?companyId=$companyId"
-                  else "${Environment.baseUrl}$BASE"
-        return client.get(url) { bearerAuth() }.body()
+        val response = client.get("${Environment.baseUrl}$BASE") {
+            bearerAuth()
+            companyId?.let { parameter("companyId", it) }  // ✅ safe param handling
+        }
+        return safeCall(response)
     }
 
-    suspend fun getByPartNumber(partNumber: String): StockItem =
-        client.get("${Environment.baseUrl}$BASE/$partNumber") { bearerAuth() }.body()
+    // ✅ GET BY PART NUMBER
+    suspend fun getByPartNumber(partNumber: String): StockItem {
+        val response = client.get("${Environment.baseUrl}$BASE/$partNumber") {
+            bearerAuth()
+        }
+        return safeCall(response)
+    }
 
-    suspend fun upsert(request: StockRequest): StockItem =
-        client.post("${Environment.baseUrl}$BASE") {
+    // ✅ UPSERT
+    suspend fun upsert(request: StockRequest): StockItem {
+        val response = client.post("${Environment.baseUrl}$BASE") {
+            bearerAuth()
             contentType(ContentType.Application.Json)
             setBody(request)
-            bearerAuth()
-        }.body()
+        }
+        return safeCall(response)
+    }
 
-    suspend fun delete(partNumber: String) =
-        client.delete("${Environment.baseUrl}$BASE/$partNumber") { bearerAuth() }
+    // ✅ DELETE
+    suspend fun delete(partNumber: String) {
+        val response = client.delete("${Environment.baseUrl}$BASE/$partNumber") {
+            bearerAuth()
+        }
+
+        // handle empty/no-content safely
+        if (response.status.value !in 200..299) {
+            val errorText = response.bodyAsText()
+            throw Exception("API ${response.status.value}: $errorText")
+        }
+    }
 }

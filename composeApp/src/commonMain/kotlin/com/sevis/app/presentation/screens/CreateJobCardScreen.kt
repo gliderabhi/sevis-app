@@ -35,27 +35,27 @@ fun CreateJobCardScreen(
     onBack: () -> Unit
 ) {
     // Customer fields
-    var custPhone   by remember { mutableStateOf("") }
-    var custName    by remember { mutableStateOf("") }
-    var custEmail   by remember { mutableStateOf("") }
-    var custAddress by remember { mutableStateOf("") }
+    var custPhone   by remember { mutableStateOf("9876543211") }
+    var custName    by remember { mutableStateOf("Munna") }
+    var custEmail   by remember { mutableStateOf("a@gmail.com") }
+    var custAddress by remember { mutableStateOf("Baridih") }
 
     // Vehicle fields
-    var vehReg      by remember { mutableStateOf("") }
-    var vehMake     by remember { mutableStateOf("") }
-    var vehModel    by remember { mutableStateOf("") }
-    var vehVariant  by remember { mutableStateOf("") }
-    var vehYear     by remember { mutableStateOf("") }
-    var vehChassis  by remember { mutableStateOf("") }
-    var vehEngine   by remember { mutableStateOf("") }
-    var vehColor    by remember { mutableStateOf("") }
+    var vehReg      by remember { mutableStateOf("KA01Hu7041") }
+    var vehMake     by remember { mutableStateOf("TVS") }
+    var vehModel    by remember { mutableStateOf("2024") }
+    var vehVariant  by remember { mutableStateOf("RTR160") }
+    var vehYear     by remember { mutableStateOf("2024") }
+    var vehChassis  by remember { mutableStateOf("546743534634345") }
+    var vehEngine   by remember { mutableStateOf("456657344236546") }
+    var vehColor    by remember { mutableStateOf("white") }
     var vehFuel     by remember { mutableStateOf(FUEL_TYPES.first()) }
 
     // Job info
     var serviceType    by remember { mutableStateOf(SERVICE_TYPES.first()) }
-    var kmIn           by remember { mutableStateOf("") }
+    var kmIn           by remember { mutableStateOf("1000") }
     var expectedDate   by remember { mutableStateOf("") }
-    var complaint      by remember { mutableStateOf("") }
+    var complaint      by remember { mutableStateOf("Service") }
     var advisorName    by remember { mutableStateOf("") }
 
     // Labour items — mutable list of (description, type, qty, rate)

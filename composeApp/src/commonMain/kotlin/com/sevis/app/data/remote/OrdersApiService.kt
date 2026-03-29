@@ -3,32 +3,52 @@ package com.sevis.app.data.remote
 import com.sevis.app.data.config.Environment
 import com.sevis.app.data.model.Order
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.get
-import io.ktor.client.request.post
-import io.ktor.client.request.put
-import io.ktor.client.request.setBody
+import io.ktor.client.request.*
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 
 class OrdersApiService(private val client: HttpClient) {
 
-    suspend fun getAll(): List<Order> =
-        client.get("${Environment.baseUrl}/orders-service/api/orders") { bearerAuth() }.body()
+    // ✅ GET ALL
+    suspend fun getAll(): List<Order> {
+        val response = client.get("${Environment.baseUrl}/orders-service/api/orders") {
+            bearerAuth()
+        }
+        return safeCall(response)
+    }
 
-    suspend fun getById(id: Long): Order =
-        client.get("${Environment.baseUrl}/orders-service/api/orders/$id") { bearerAuth() }.body()
+    // ✅ GET BY ID
+    suspend fun getById(id: Long): Order {
+        val response = client.get("${Environment.baseUrl}/orders-service/api/orders/$id") {
+            bearerAuth()
+        }
+        return safeCall(response)
+    }
 
-    suspend fun getByUserId(userId: Long): List<Order> =
-        client.get("${Environment.baseUrl}/orders-service/api/orders/user/$userId") { bearerAuth() }.body()
+    // ✅ GET BY USER ID
+    suspend fun getByUserId(userId: Long): List<Order> {
+        val response = client.get("${Environment.baseUrl}/orders-service/api/orders/user/$userId") {
+            bearerAuth()
+        }
+        return safeCall(response)
+    }
 
-    suspend fun create(order: Order): Order =
-        client.post("${Environment.baseUrl}/orders-service/api/orders") {
+    // ✅ CREATE
+    suspend fun create(order: Order): Order {
+        val response = client.post("${Environment.baseUrl}/orders-service/api/orders") {
+            bearerAuth()
             contentType(ContentType.Application.Json)
             setBody(order)
-            bearerAuth()
-        }.body()
+        }
+        return safeCall(response)
+    }
 
-    suspend fun updateStatus(id: Long, status: String): Order =
-        client.put("${Environment.baseUrl}/orders-service/api/orders/$id/status?status=$status") { bearerAuth() }.body()
+    // ✅ UPDATE STATUS (cleaner query param handling)
+    suspend fun updateStatus(id: Long, status: String): Order {
+        val response = client.put("${Environment.baseUrl}/orders-service/api/orders/$id/status") {
+            bearerAuth()
+            parameter("status", status)   // ✅ better than manual string concat
+        }
+        return safeCall(response)
+    }
 }
