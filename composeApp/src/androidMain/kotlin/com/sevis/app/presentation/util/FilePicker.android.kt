@@ -25,6 +25,10 @@ actual fun FilePicker(
         }
     }
     LaunchedEffect(show) {
-        if (show) launcher.launch(arrayOf("*/*"))
+        if (show) launcher.launch(arrayOf(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "text/csv",
+            "text/tab-separated-values"
+        ))
     }
 }

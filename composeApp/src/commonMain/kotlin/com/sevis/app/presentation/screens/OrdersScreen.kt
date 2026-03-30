@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.sevis.app.presentation.util.fmtRs
 import androidx.compose.ui.unit.dp
 import com.sevis.app.data.model.JobCardDetail
 import com.sevis.app.data.model.JobCardSummary
@@ -128,7 +129,7 @@ private fun JobCardSummaryCard(jc: JobCardSummary, onClick: () -> Unit) {
                 StatusChip(jc.status)
                 if (jc.grandTotal != null) {
                     Spacer(Modifier.height(4.dp))
-                    Text("₹${"%,.0f".format(jc.grandTotal)}", style = MaterialTheme.typography.titleSmall)
+                    Text("₹${jc.grandTotal.fmtRs(0)}", style = MaterialTheme.typography.titleSmall)
                 }
             }
         }
@@ -309,19 +310,19 @@ private fun JobCardDetailContent(
                 // Billing
                 jobCard.billing?.let { b ->
                     DetailSection("Billing Summary") {
-                        DetailRow("Labour",      "₹${"%,.2f".format(b.labourTotal)}")
-                        DetailRow("Parts",       "₹${"%,.2f".format(b.partsTotal)}")
-                        DetailRow("Ancillary",   "₹${"%,.2f".format(b.ancillaryTotal)}")
-                        DetailRow("Sub Total",   "₹${"%,.2f".format(b.subTotal)}")
-                        if (b.discount > 0)  DetailRow("Discount",  "-₹${"%,.2f".format(b.discount)}")
-                        DetailRow("Taxable",     "₹${"%,.2f".format(b.taxableAmount)}")
-                        if (b.cgstRate > 0)  DetailRow("CGST ${b.cgstRate}%",  "₹${"%,.2f".format(b.cgstAmount)}")
-                        if (b.sgstRate > 0)  DetailRow("SGST ${b.sgstRate}%",  "₹${"%,.2f".format(b.sgstAmount)}")
-                        if (b.igstRate > 0)  DetailRow("IGST ${b.igstRate}%",  "₹${"%,.2f".format(b.igstAmount)}")
+                        DetailRow("Labour",      "₹${b.labourTotal.fmtRs()}")
+                        DetailRow("Parts",       "₹${b.partsTotal.fmtRs()}")
+                        DetailRow("Ancillary",   "₹${b.ancillaryTotal.fmtRs()}")
+                        DetailRow("Sub Total",   "₹${b.subTotal.fmtRs()}")
+                        if (b.discount > 0)  DetailRow("Discount",  "-₹${b.discount.fmtRs()}")
+                        DetailRow("Taxable",     "₹${b.taxableAmount.fmtRs()}")
+                        if (b.cgstRate > 0)  DetailRow("CGST ${b.cgstRate}%",  "₹${b.cgstAmount.fmtRs()}")
+                        if (b.sgstRate > 0)  DetailRow("SGST ${b.sgstRate}%",  "₹${b.sgstAmount.fmtRs()}")
+                        if (b.igstRate > 0)  DetailRow("IGST ${b.igstRate}%",  "₹${b.igstAmount.fmtRs()}")
                         HorizontalDivider()
-                        DetailRow("Grand Total", "₹${"%,.2f".format(b.grandTotal)}", bold = true)
-                        if (b.advanceAmount > 0) DetailRow("Advance", "₹${"%,.2f".format(b.advanceAmount)}")
-                        DetailRow("Balance Due", "₹${"%,.2f".format(b.balanceDue)}", bold = true)
+                        DetailRow("Grand Total", "₹${b.grandTotal.fmtRs()}", bold = true)
+                        if (b.advanceAmount > 0) DetailRow("Advance", "₹${b.advanceAmount.fmtRs()}")
+                        DetailRow("Balance Due", "₹${b.balanceDue.fmtRs()}", bold = true)
                         DetailRow("Payment", b.paymentType)
                     }
                 }

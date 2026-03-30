@@ -1,6 +1,7 @@
 package com.sevis.app.data.remote
 
 import com.sevis.app.data.config.Environment
+import com.sevis.app.data.model.StockImportResult
 import com.sevis.app.data.model.StockItem
 import com.sevis.app.data.model.StockRequest
 import io.ktor.client.HttpClient
@@ -36,6 +37,16 @@ class StockApiService(private val client: HttpClient) {
             bearerAuth()
             contentType(ContentType.Application.Json)
             setBody(request)
+        }
+        return safeCall(response)
+    }
+
+    // ✅ IMPORT XLSX
+    suspend fun importXlsx(bytes: ByteArray, filename: String): StockImportResult {
+        val response = client.post("${Environment.baseUrl}$BASE/update-inventory") {
+            bearerAuth()
+            contentType(ContentType.Application.OctetStream)
+            setBody(bytes)
         }
         return safeCall(response)
     }

@@ -1,5 +1,6 @@
 package com.sevis.app.data.repository
 
+import com.sevis.app.data.model.StockImportResult
 import com.sevis.app.data.model.StockItem
 import com.sevis.app.data.model.StockRequest
 import com.sevis.app.data.remote.StockApiService
@@ -14,4 +15,7 @@ class StockRepository(private val api: StockApiService) {
 
     suspend fun delete(partNumber: String): Result<Unit> =
         runCatching { api.delete(partNumber) }
+
+    suspend fun importXlsx(bytes: ByteArray, filename: String): Result<StockImportResult> =
+        runCatching { api.importXlsx(bytes, filename) }
 }

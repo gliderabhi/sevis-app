@@ -152,7 +152,7 @@ class PartsViewModel(
             val chars = CharArray(data.size / 2) { i ->
                 ((data[i * 2].toInt() and 0xFF) or ((data[i * 2 + 1].toInt() and 0xFF) shl 8)).toChar()
             }
-            String(chars)
+            chars.concatToString()
         }
         // UTF-16 BE BOM: FE FF
         bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte() -> {
@@ -160,7 +160,7 @@ class PartsViewModel(
             val chars = CharArray(data.size / 2) { i ->
                 (((data[i * 2].toInt() and 0xFF) shl 8) or (data[i * 2 + 1].toInt() and 0xFF)).toChar()
             }
-            String(chars)
+            chars.concatToString()
         }
         // UTF-8 BOM: EF BB BF
         bytes.size >= 3 && bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte() ->

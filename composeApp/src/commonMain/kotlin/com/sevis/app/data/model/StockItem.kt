@@ -25,3 +25,12 @@ data class StockRequest(
     val quantity: Int,
     val purchasePrice: Double? = null
 )
+
+@Serializable
+data class StockImportResult(
+    val created: Int = 0,
+    val updated: Int = 0,
+    val skipped: Int = 0,
+    val total: Int = 0,
+    val message: String = ""
+)

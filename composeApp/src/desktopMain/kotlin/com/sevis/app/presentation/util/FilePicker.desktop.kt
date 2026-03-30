@@ -14,9 +14,9 @@ actual fun FilePicker(
     LaunchedEffect(show) {
         if (!show) return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Select CSV File", java.awt.FileDialog.LOAD)
+            val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Select File", java.awt.FileDialog.LOAD)
             dialog.setFilenameFilter { _, name ->
-                name.endsWith(".csv", ignoreCase = true) || name.endsWith(".tsv", ignoreCase = true)
+                name.endsWith(".xlsx", ignoreCase = true) || name.endsWith(".csv", ignoreCase = true) || name.endsWith(".tsv", ignoreCase = true)
             }
             dialog.isVisible = true
             val dir = dialog.directory

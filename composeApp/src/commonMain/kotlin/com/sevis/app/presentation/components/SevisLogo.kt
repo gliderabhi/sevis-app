@@ -133,7 +133,7 @@ internal fun gearPath(
     val path      = Path()
     val step      = (2.0 * PI / numTeeth).toFloat()
     val toothHalf = step * 0.22f
-    val rotRad    = Math.toRadians(rotateDeg.toDouble()).toFloat()
+    val rotRad    = (rotateDeg * PI / 180.0).toFloat()
 
     for (i in 0 until numTeeth) {
         val base = step * i + rotRad

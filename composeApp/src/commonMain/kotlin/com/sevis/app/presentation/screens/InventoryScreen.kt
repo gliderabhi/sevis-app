@@ -56,6 +56,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.sevis.app.data.model.Part
 import com.sevis.app.data.model.StockItem
+import com.sevis.app.presentation.util.FilePicker
+import com.sevis.app.presentation.util.fmtRs
 import com.sevis.app.presentation.viewmodel.PartsViewModel
 import com.sevis.app.presentation.viewmodel.StockViewModel
 import kotlinx.coroutines.delay
@@ -201,7 +203,9 @@ private fun CatalogueTab(viewModel: PartsViewModel) {
 @Composable
 private fun StockTab(viewModel: StockViewModel, catalogueParts: List<Part>) {
     val state by viewModel.state.collectAsState()
-    var showAddDialog by remember { mutableStateOf(false) }
+    var showAddDialog    by remember { mutableStateOf(false) }
+    var showFilePicker   by remember { mutableStateOf(false) }
+    var snackbarMessage  by remember { mutableStateOf<String?>(null) }
 
     if (showAddDialog) {
         AddStockDialog(
@@ -212,6 +216,30 @@ private fun StockTab(viewModel: StockViewModel, catalogueParts: List<Part>) {
             },
             onDismiss = { showAddDialog = false }
         )
+    }
+
+    FilePicker(
+        show = showFilePicker,
+        onFilePicked = { name, bytes ->
+            showFilePicker = false
+            viewModel.importXlsx(bytes, name)
+        },
+        onDismiss = { showFilePicker = false }
+    )
+
+    LaunchedEffect(state.importResult, state.importError) {
+        val result = state.importResult
+        val error  = state.importError
+        when {
+            result != null -> {
+                snackbarMessage = "PO imported: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped"
+                delay(4000); snackbarMessage = null; viewModel.clearImportResult()
+            }
+            error != null -> {
+                snackbarMessage = "Import failed: $error"
+                delay(4000); snackbarMessage = null; viewModel.clearImportResult()
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -232,6 +260,7 @@ private fun StockTab(viewModel: StockViewModel, catalogueParts: List<Part>) {
             ) {
                 Text("No stock entries yet", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Button(onClick = { showAddDialog = true }) { Text("Add First Part") }
+                Button(onClick = { showFilePicker = true }) { Text("Import PO (.xlsx)") }
             }
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -246,20 +275,34 @@ private fun StockTab(viewModel: StockViewModel, catalogueParts: List<Part>) {
             }
         }
 
-        // FAB to add stock
+        // Action buttons
         if (state.items.isNotEmpty()) {
-            Button(
-                onClick = { showAddDialog = true },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+            Row(
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text("Add Part")
+                Button(onClick = { showFilePicker = true }) {
+                    Text("Import PO")
+                }
+                Button(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Add Part")
+                }
             }
         }
 
-        if (state.isSaving) {
+        if (state.isSaving || state.isImporting) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
+        }
+
+        snackbarMessage?.let { message ->
+            Snackbar(
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp, start = 16.dp, end = 16.dp),
+                action = { TextButton(onClick = { snackbarMessage = null }) { Text("Dismiss") } },
+                containerColor = if (state.importError != null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+                contentColor   = if (state.importError != null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
+            ) { Text(message) }
         }
     }
 }
@@ -465,8 +508,8 @@ private fun StockCard(
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LabelValue("MRP", "₹%.2f".format(item.mrpPrice))
-                    item.purchasePrice?.let { LabelValue("Purchase", "₹%.2f".format(it)) }
+                    LabelValue("MRP", "₹${item.mrpPrice.fmtRs()}")
+                    item.purchasePrice?.let { LabelValue("Purchase", "₹${it.fmtRs()}") }
                     if (item.uom.isNotBlank()) LabelValue("UoM", item.uom)
                 }
             }
@@ -518,8 +561,8 @@ private fun PartCard(part: Part) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                PriceChip("MRP", "₹%.2f".format(part.mrpPrice))
-                PriceChip("Purchase", "₹%.2f".format(part.purchasePrice))
+                PriceChip("MRP", "₹${part.mrpPrice.fmtRs()}")
+                PriceChip("Purchase", "₹${part.purchasePrice.fmtRs()}")
             }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
