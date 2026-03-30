@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +21,7 @@ import com.sevis.app.data.model.InvoiceDetail
 import com.sevis.app.data.model.JobCardDetail
 import com.sevis.app.data.model.JobCardSummary
 import com.sevis.app.presentation.util.FilePicker
+import com.sevis.app.presentation.util.FileSaver
 import com.sevis.app.presentation.viewmodel.JobCardScreen
 import com.sevis.app.presentation.viewmodel.JobCardViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -62,10 +64,18 @@ fun OrdersScreen(
             jobCard     = state.selectedJobCard,
             invoices    = state.invoices,
             isLoading   = state.isLoading,
+            isDownloadingPdf = state.isDownloadingPdf,
+            pdfBytes    = state.pdfBytes,
+            pdfFileName = state.pdfFileName,
+            pdfSaveMessage = state.pdfSaveMessage,
             error       = state.error,
             invoiceError = state.invoiceError,
             onBack      = { viewModel.navigateBack() },
-            onStatusUpdate = { status -> viewModel.updateStatus(screen.jobCardId, status) },
+            onStatusUpdate  = { status -> viewModel.updateStatus(screen.jobCardId, status) },
+            onDownloadPdf   = { id, num -> viewModel.downloadInvoicePdf(id, num) },
+            onPdfSaved      = { viewModel.onPdfSaved(it) },
+            onPdfSaveError  = { viewModel.onPdfSaveError(it) },
+            onClearPdfMessage = { viewModel.clearPdfMessage() },
             onClearInvoiceError = { viewModel.clearInvoiceError() }
         )
     }
@@ -218,12 +228,26 @@ private fun JobCardDetailContent(
     jobCard: JobCardDetail?,
     invoices: List<InvoiceDetail>,
     isLoading: Boolean,
+    isDownloadingPdf: Boolean,
+    pdfBytes: ByteArray?,
+    pdfFileName: String,
+    pdfSaveMessage: String?,
     error: String?,
     invoiceError: String?,
     onBack: () -> Unit,
     onStatusUpdate: (String) -> Unit,
+    onDownloadPdf: (Long, String) -> Unit,
+    onPdfSaved: (String) -> Unit,
+    onPdfSaveError: (String) -> Unit,
+    onClearPdfMessage: () -> Unit,
     onClearInvoiceError: () -> Unit
 ) {
+    FileSaver(
+        bytes    = pdfBytes,
+        fileName = pdfFileName,
+        onSaved  = onPdfSaved,
+        onError  = onPdfSaveError
+    )
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text(jobCard?.jobCardNumber ?: "Job Card") },
@@ -384,6 +408,13 @@ private fun JobCardDetailContent(
                         invoiceError?.let {
                             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                         }
+                        pdfSaveMessage?.let {
+                            Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                            LaunchedEffect(it) {
+                                kotlinx.coroutines.delay(3000)
+                                onClearPdfMessage()
+                            }
+                        }
                         invoices.forEach { inv ->
                             Row(
                                 Modifier.fillMaxWidth(),
@@ -394,7 +425,19 @@ private fun JobCardDetailContent(
                                     Text(inv.invoiceNumber, style = MaterialTheme.typography.bodyMedium)
                                     if (inv.invoiceDate != null) Text(inv.invoiceDate, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                if (inv.grandTotal != null) Text("₹${inv.grandTotal}", style = MaterialTheme.typography.bodyMedium)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (inv.grandTotal != null) Text("₹${inv.grandTotal}", style = MaterialTheme.typography.bodyMedium)
+                                    Spacer(Modifier.width(8.dp))
+                                    IconButton(
+                                        onClick = { onDownloadPdf(inv.id, inv.invoiceNumber) },
+                                        enabled = !isDownloadingPdf
+                                    ) {
+                                        if (isDownloadingPdf)
+                                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                        else
+                                            Icon(Icons.Default.Download, contentDescription = "Download PDF", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
                             }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         }

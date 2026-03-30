@@ -13,4 +13,7 @@ class InvoiceRepository(private val api: InvoiceApiService) {
 
     suspend fun uploadPdf(pdfBytes: ByteArray): Result<InvoiceDetail> =
         runCatching { api.uploadPdf(pdfBytes) }
+
+    suspend fun downloadPdf(id: Long): Result<ByteArray> =
+        runCatching { api.downloadPdf(id) }
 }

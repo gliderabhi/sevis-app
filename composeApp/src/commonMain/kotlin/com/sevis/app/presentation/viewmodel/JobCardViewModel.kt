@@ -27,6 +27,10 @@ data class JobCardState(
     val isLoading: Boolean = false,
     val isCreating: Boolean = false,
     val isUploadingInvoice: Boolean = false,
+    val isDownloadingPdf: Boolean = false,
+    val pdfBytes: ByteArray? = null,
+    val pdfFileName: String = "",
+    val pdfSaveMessage: String? = null,
     val error: String? = null,
     val invoiceError: String? = null,
     val screen: JobCardScreen = JobCardScreen.List
@@ -119,6 +123,38 @@ class JobCardViewModel(
                     _state.update { it.copy(error = e.message ?: "Failed to update status") }
                 }
         }
+    }
+
+    fun downloadInvoicePdf(invoiceId: Long, invoiceNumber: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isDownloadingPdf = true) }
+            invoiceRepository.downloadPdf(invoiceId)
+                .onSuccess { bytes ->
+                    _state.update { it.copy(
+                        isDownloadingPdf = false,
+                        pdfBytes  = bytes,
+                        pdfFileName = "invoice-$invoiceNumber.pdf"
+                    )}
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(
+                        isDownloadingPdf = false,
+                        invoiceError = e.message ?: "Failed to download PDF"
+                    )}
+                }
+        }
+    }
+
+    fun onPdfSaved(fileName: String) {
+        _state.update { it.copy(pdfBytes = null, pdfFileName = "", pdfSaveMessage = "Saved: $fileName") }
+    }
+
+    fun onPdfSaveError(msg: String) {
+        _state.update { it.copy(pdfBytes = null, pdfFileName = "", invoiceError = msg) }
+    }
+
+    fun clearPdfMessage() {
+        _state.update { it.copy(pdfSaveMessage = null) }
     }
 
     fun clearError() {

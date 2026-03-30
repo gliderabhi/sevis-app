@@ -3,6 +3,7 @@ package com.sevis.app.data.remote
 import com.sevis.app.data.config.Environment
 import com.sevis.app.data.model.InvoiceDetail
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.request.*
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -33,5 +34,14 @@ class InvoiceApiService(private val client: HttpClient) {
             setBody(pdfBytes)
         }
         return safeCall(response)
+    }
+
+    suspend fun downloadPdf(id: Long): ByteArray {
+        val response = client.get("${Environment.baseUrl}$BASE/$id/pdf") {
+            bearerAuth()
+        }
+        if (response.status.value !in 200..299)
+            throw Exception("API ${response.status.value}: Failed to download PDF")
+        return response.body()
     }
 }
