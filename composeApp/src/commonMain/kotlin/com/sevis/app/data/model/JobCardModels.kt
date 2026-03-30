@@ -15,8 +15,8 @@ data class CustomerRequest(
 @Serializable
 data class VehicleRequest(
     val regNumber: String,
-    val make: String,
-    val model: String,
+    val make: String? = null,
+    val model: String? = null,
     val variant: String? = null,
     val year: Int? = null,
     val chassisNo: String? = null,
@@ -121,8 +121,8 @@ data class CustomerInfo(
 data class VehicleInfo(
     val id: Long,
     val regNumber: String,
-    val make: String,
-    val model: String,
+    val make: String? = null,
+    val model: String? = null,
     val variant: String? = null,
     val year: Int? = null,
     val chassisNo: String? = null,

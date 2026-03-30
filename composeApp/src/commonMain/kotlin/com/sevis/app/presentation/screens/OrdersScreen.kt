@@ -9,14 +9,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.sevis.app.presentation.util.fmtRs
 import androidx.compose.ui.unit.dp
+import com.sevis.app.data.model.InvoiceDetail
 import com.sevis.app.data.model.JobCardDetail
 import com.sevis.app.data.model.JobCardSummary
+import com.sevis.app.presentation.util.FilePicker
 import com.sevis.app.presentation.viewmodel.JobCardScreen
 import com.sevis.app.presentation.viewmodel.JobCardViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -28,16 +31,24 @@ fun OrdersScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.loadJobCards()
+    }
+
     when (val screen = state.screen) {
         is JobCardScreen.List -> JobCardListContent(
             modifier    = modifier,
             jobCards    = state.jobCards,
             isLoading   = state.isLoading,
+            isUploadingInvoice = state.isUploadingInvoice,
+            invoiceError = state.invoiceError,
             error       = state.error,
             onCreateClick   = { viewModel.navigateToCreate() },
             onJobCardClick  = { id -> viewModel.navigateToDetail(id) },
             onRefresh       = { viewModel.loadJobCards() },
-            onClearError    = { viewModel.clearError() }
+            onClearError    = { viewModel.clearError() },
+            onUploadInvoice = { bytes -> viewModel.uploadInvoicePdf(bytes) },
+            onClearInvoiceError = { viewModel.clearInvoiceError() }
         )
         is JobCardScreen.Create -> CreateJobCardScreen(
             modifier   = modifier,
@@ -49,10 +60,13 @@ fun OrdersScreen(
         is JobCardScreen.Detail -> JobCardDetailContent(
             modifier    = modifier,
             jobCard     = state.selectedJobCard,
+            invoices    = state.invoices,
             isLoading   = state.isLoading,
             error       = state.error,
+            invoiceError = state.invoiceError,
             onBack      = { viewModel.navigateBack() },
-            onStatusUpdate = { status -> viewModel.updateStatus(screen.jobCardId, status) }
+            onStatusUpdate = { status -> viewModel.updateStatus(screen.jobCardId, status) },
+            onClearInvoiceError = { viewModel.clearInvoiceError() }
         )
     }
 }
@@ -65,17 +79,42 @@ private fun JobCardListContent(
     modifier: Modifier,
     jobCards: List<JobCardSummary>,
     isLoading: Boolean,
+    isUploadingInvoice: Boolean,
+    invoiceError: String?,
     error: String?,
     onCreateClick: () -> Unit,
     onJobCardClick: (Long) -> Unit,
     onRefresh: () -> Unit,
-    onClearError: () -> Unit
+    onClearError: () -> Unit,
+    onUploadInvoice: (ByteArray) -> Unit,
+    onClearInvoiceError: () -> Unit
 ) {
+    var showFilePicker by remember { mutableStateOf(false) }
+    var snackbarMessage by remember { mutableStateOf<String?>(null) }
+
+    FilePicker(
+        show = showFilePicker,
+        onFilePicked = { _, bytes -> showFilePicker = false; onUploadInvoice(bytes) },
+        onDismiss = { showFilePicker = false }
+    )
+
+    LaunchedEffect(invoiceError) {
+        if (invoiceError != null) {
+            snackbarMessage = invoiceError
+        }
+    }
+
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreateClick) {
-                Icon(Icons.Default.Add, contentDescription = "New Job Card")
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SmallFloatingActionButton(onClick = { showFilePicker = true }) {
+                    if (isUploadingInvoice) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Default.Upload, contentDescription = "Upload Invoice PDF")
+                }
+                FloatingActionButton(onClick = onCreateClick) {
+                    Icon(Icons.Default.Add, contentDescription = "New Job Card")
+                }
             }
         }
     ) { innerPadding ->
@@ -103,6 +142,15 @@ private fun JobCardListContent(
                         JobCardSummaryCard(jc, onClick = { onJobCardClick(jc.id) })
                     }
                 }
+            }
+
+            snackbarMessage?.let { msg ->
+                Snackbar(
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                    action = { TextButton(onClick = { snackbarMessage = null; onClearInvoiceError() }) { Text("Dismiss") } },
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                ) { Text(msg) }
             }
         }
     }
@@ -168,10 +216,13 @@ private val STATUS_TRANSITIONS = mapOf(
 private fun JobCardDetailContent(
     modifier: Modifier,
     jobCard: JobCardDetail?,
+    invoices: List<InvoiceDetail>,
     isLoading: Boolean,
     error: String?,
+    invoiceError: String?,
     onBack: () -> Unit,
-    onStatusUpdate: (String) -> Unit
+    onStatusUpdate: (String) -> Unit,
+    onClearInvoiceError: () -> Unit
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(
@@ -324,6 +375,29 @@ private fun JobCardDetailContent(
                         if (b.advanceAmount > 0) DetailRow("Advance", "₹${b.advanceAmount.fmtRs()}")
                         DetailRow("Balance Due", "₹${b.balanceDue.fmtRs()}", bold = true)
                         DetailRow("Payment", b.paymentType)
+                    }
+                }
+
+                // Invoices
+                if (invoices.isNotEmpty() || invoiceError != null) {
+                    DetailSection("Invoices") {
+                        invoiceError?.let {
+                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        }
+                        invoices.forEach { inv ->
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(inv.invoiceNumber, style = MaterialTheme.typography.bodyMedium)
+                                    if (inv.invoiceDate != null) Text(inv.invoiceDate, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                if (inv.grandTotal != null) Text("₹${inv.grandTotal}", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        }
                     }
                 }
 

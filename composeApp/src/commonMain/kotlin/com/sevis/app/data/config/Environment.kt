@@ -7,7 +7,7 @@ object Environment {
         PROD ("Prod",   "http://32.194.147.195:8080")
     }
 
-    var current: Env = Env.PROD
+    var current: Env = Env.LOCAL
         private set
 
     val baseUrl: String get() = current.baseUrl
