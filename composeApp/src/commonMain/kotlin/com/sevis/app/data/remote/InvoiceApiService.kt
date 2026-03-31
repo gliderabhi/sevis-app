@@ -36,6 +36,13 @@ class InvoiceApiService(private val client: HttpClient) {
         return safeCall(response)
     }
 
+    suspend fun generateInvoice(jobCardId: Long): InvoiceDetail {
+        val response = client.post("${Environment.baseUrl}/orders-service/api/job-cards/$jobCardId/invoice") {
+            bearerAuth()
+        }
+        return safeCall(response)
+    }
+
     suspend fun downloadPdf(id: Long): ByteArray {
         val response = client.get("${Environment.baseUrl}$BASE/$id/pdf") {
             bearerAuth()

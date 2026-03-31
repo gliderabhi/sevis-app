@@ -30,6 +30,7 @@ data class JobCardState(
     val isLoading: Boolean = false,
     val isCreating: Boolean = false,
     val isUploadingInvoice: Boolean = false,
+    val isGeneratingInvoice: Boolean = false,
     val isUpdating: Boolean = false,
     val isDownloadingPdf: Boolean = false,
     val pdfBytes: ByteArray? = null,
@@ -91,6 +92,20 @@ class JobCardViewModel(
             invoiceRepository.uploadPdf(pdfBytes)
                 .onSuccess { _ -> _state.update { it.copy(isUploadingInvoice = false) }; loadJobCards() }
                 .onFailure { e -> _state.update { it.copy(isUploadingInvoice = false, invoiceError = e.message ?: "Upload failed") } }
+        }
+    }
+
+    fun generateInvoice(jobCardId: Long) {
+        viewModelScope.launch {
+            _state.update { it.copy(isGeneratingInvoice = true, invoiceError = null) }
+            invoiceRepository.generateInvoice(jobCardId)
+                .onSuccess { inv ->
+                    _state.update { it.copy(isGeneratingInvoice = false) }
+                    loadInvoices(jobCardId)
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(isGeneratingInvoice = false, invoiceError = e.message ?: "Failed to generate invoice") }
+                }
         }
     }
 

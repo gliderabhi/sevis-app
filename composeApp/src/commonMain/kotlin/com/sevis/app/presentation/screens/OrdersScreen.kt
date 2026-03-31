@@ -69,6 +69,7 @@ fun OrdersScreen(
             invoices         = state.invoices,
             isLoading        = state.isLoading,
             isUpdating       = state.isUpdating,
+            isGeneratingInvoice = state.isGeneratingInvoice,
             isDownloadingPdf = state.isDownloadingPdf,
             pdfBytes         = state.pdfBytes,
             pdfFileName      = state.pdfFileName,
@@ -83,6 +84,7 @@ fun OrdersScreen(
             onPdfSaveError   = { viewModel.onPdfSaveError(it) },
             onClearPdfMessage   = { viewModel.clearPdfMessage() },
             onClearInvoiceError = { viewModel.clearInvoiceError() },
+            onGenerateInvoice = { viewModel.generateInvoice(screen.jobCardId) },
             onAddLabour      = { req -> viewModel.addLabour(screen.jobCardId, req) },
             onDeleteLabour   = { lid -> viewModel.deleteLabour(screen.jobCardId, lid) },
             onAddPart        = { req -> viewModel.addPart(screen.jobCardId, req) },
@@ -241,6 +243,7 @@ private fun JobCardDetailContent(
     invoices: List<InvoiceDetail>,
     isLoading: Boolean,
     isUpdating: Boolean,
+    isGeneratingInvoice: Boolean,
     isDownloadingPdf: Boolean,
     pdfBytes: ByteArray?,
     pdfFileName: String,
@@ -255,6 +258,7 @@ private fun JobCardDetailContent(
     onPdfSaveError: (String) -> Unit,
     onClearPdfMessage: () -> Unit,
     onClearInvoiceError: () -> Unit,
+    onGenerateInvoice: () -> Unit,
     onAddLabour: (LabourItemRequest) -> Unit,
     onDeleteLabour: (Long) -> Unit,
     onAddPart: (PartItemRequest) -> Unit,
@@ -553,45 +557,69 @@ private fun JobCardDetailContent(
                 }
 
                 // Invoices
-                DetailSection("Invoices") {
-                    invoiceError?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
-                    pdfSaveMessage?.let {
-                        Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
-                        LaunchedEffect(it) {
-                            kotlinx.coroutines.delay(3000)
-                            onClearPdfMessage()
-                        }
-                    }
-                    if (invoices.isEmpty()) {
-                        Text("No invoices attached.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                    } else {
-                        invoices.forEach { inv ->
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Invoices", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            Button(
+                                onClick = onGenerateInvoice,
+                                enabled = !isGeneratingInvoice,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(inv.invoiceNumber, style = MaterialTheme.typography.bodyMedium)
-                                    if (inv.invoiceDate != null) Text(inv.invoiceDate, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (isGeneratingInvoice) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                    Spacer(Modifier.width(6.dp))
                                 }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (inv.grandTotal != null) Text("₹${inv.grandTotal}", style = MaterialTheme.typography.bodyMedium)
-                                    Spacer(Modifier.width(8.dp))
-                                    IconButton(
-                                        onClick = { onDownloadInvoicePdf(inv.id, inv.invoiceNumber) },
-                                        enabled = !isDownloadingPdf
-                                    ) {
-                                        if (isDownloadingPdf)
-                                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                                        else
-                                            Icon(Icons.Default.Download, contentDescription = "Download Invoice PDF", tint = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    if (invoices.isEmpty()) "Generate Invoice" else "Update Invoice",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                        HorizontalDivider()
+                        invoiceError?.let {
+                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        }
+                        pdfSaveMessage?.let {
+                            Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                            LaunchedEffect(it) {
+                                kotlinx.coroutines.delay(3000)
+                                onClearPdfMessage()
+                            }
+                        }
+                        if (invoices.isEmpty()) {
+                            Text("No invoices attached.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        } else {
+                            invoices.forEach { inv ->
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(inv.invoiceNumber, style = MaterialTheme.typography.bodyMedium)
+                                        if (inv.invoiceDate != null) Text(inv.invoiceDate, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (inv.grandTotal != null) Text("₹${inv.grandTotal}", style = MaterialTheme.typography.bodyMedium)
+                                        Spacer(Modifier.width(8.dp))
+                                        IconButton(
+                                            onClick = { onDownloadInvoicePdf(inv.id, inv.invoiceNumber) },
+                                            enabled = !isDownloadingPdf
+                                        ) {
+                                            if (isDownloadingPdf)
+                                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                            else
+                                                Icon(Icons.Default.Download, contentDescription = "Download Invoice PDF", tint = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
                                 }
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                             }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         }
                     }
                 }

@@ -16,4 +16,7 @@ class InvoiceRepository(private val api: InvoiceApiService) {
 
     suspend fun downloadPdf(id: Long): Result<ByteArray> =
         runCatching { api.downloadPdf(id) }
+
+    suspend fun generateInvoice(jobCardId: Long): Result<InvoiceDetail> =
+        runCatching { api.generateInvoice(jobCardId) }
 }
