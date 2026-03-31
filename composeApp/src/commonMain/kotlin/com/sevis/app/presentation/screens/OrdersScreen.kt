@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
@@ -17,9 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.sevis.app.presentation.util.fmtRs
 import androidx.compose.ui.unit.dp
+import com.sevis.app.data.model.AncillaryItemRequest
 import com.sevis.app.data.model.InvoiceDetail
 import com.sevis.app.data.model.JobCardDetail
 import com.sevis.app.data.model.JobCardSummary
+import com.sevis.app.data.model.LabourItemRequest
+import com.sevis.app.data.model.PartItemRequest
 import com.sevis.app.presentation.util.FilePicker
 import com.sevis.app.presentation.util.FileSaver
 import com.sevis.app.presentation.viewmodel.JobCardScreen
@@ -60,23 +64,31 @@ fun OrdersScreen(
             onBack     = { viewModel.navigateBack() }
         )
         is JobCardScreen.Detail -> JobCardDetailContent(
-            modifier    = modifier,
-            jobCard     = state.selectedJobCard,
-            invoices    = state.invoices,
-            isLoading   = state.isLoading,
+            modifier         = modifier,
+            jobCard          = state.selectedJobCard,
+            invoices         = state.invoices,
+            isLoading        = state.isLoading,
+            isUpdating       = state.isUpdating,
             isDownloadingPdf = state.isDownloadingPdf,
-            pdfBytes    = state.pdfBytes,
-            pdfFileName = state.pdfFileName,
-            pdfSaveMessage = state.pdfSaveMessage,
-            error       = state.error,
-            invoiceError = state.invoiceError,
-            onBack      = { viewModel.navigateBack() },
-            onStatusUpdate  = { status -> viewModel.updateStatus(screen.jobCardId, status) },
-            onDownloadPdf   = { id, num -> viewModel.downloadInvoicePdf(id, num) },
-            onPdfSaved      = { viewModel.onPdfSaved(it) },
-            onPdfSaveError  = { viewModel.onPdfSaveError(it) },
-            onClearPdfMessage = { viewModel.clearPdfMessage() },
-            onClearInvoiceError = { viewModel.clearInvoiceError() }
+            pdfBytes         = state.pdfBytes,
+            pdfFileName      = state.pdfFileName,
+            pdfSaveMessage   = state.pdfSaveMessage,
+            error            = state.error,
+            invoiceError     = state.invoiceError,
+            onBack           = { viewModel.navigateBack() },
+            onStatusUpdate   = { status -> viewModel.updateStatus(screen.jobCardId, status) },
+            onDownloadBill   = { viewModel.downloadJobCardPdf(screen.jobCardId, state.selectedJobCard?.jobCardNumber ?: "") },
+            onDownloadInvoicePdf = { id, num -> viewModel.downloadInvoicePdf(id, num) },
+            onPdfSaved       = { viewModel.onPdfSaved(it) },
+            onPdfSaveError   = { viewModel.onPdfSaveError(it) },
+            onClearPdfMessage   = { viewModel.clearPdfMessage() },
+            onClearInvoiceError = { viewModel.clearInvoiceError() },
+            onAddLabour      = { req -> viewModel.addLabour(screen.jobCardId, req) },
+            onDeleteLabour   = { lid -> viewModel.deleteLabour(screen.jobCardId, lid) },
+            onAddPart        = { req -> viewModel.addPart(screen.jobCardId, req) },
+            onDeletePart     = { pid -> viewModel.deletePart(screen.jobCardId, pid) },
+            onAddAncillary   = { req -> viewModel.addAncillary(screen.jobCardId, req) },
+            onDeleteAncillary= { aid -> viewModel.deleteAncillary(screen.jobCardId, aid) }
         )
     }
 }
@@ -228,6 +240,7 @@ private fun JobCardDetailContent(
     jobCard: JobCardDetail?,
     invoices: List<InvoiceDetail>,
     isLoading: Boolean,
+    isUpdating: Boolean,
     isDownloadingPdf: Boolean,
     pdfBytes: ByteArray?,
     pdfFileName: String,
@@ -236,18 +249,121 @@ private fun JobCardDetailContent(
     invoiceError: String?,
     onBack: () -> Unit,
     onStatusUpdate: (String) -> Unit,
-    onDownloadPdf: (Long, String) -> Unit,
+    onDownloadBill: () -> Unit,
+    onDownloadInvoicePdf: (Long, String) -> Unit,
     onPdfSaved: (String) -> Unit,
     onPdfSaveError: (String) -> Unit,
     onClearPdfMessage: () -> Unit,
-    onClearInvoiceError: () -> Unit
+    onClearInvoiceError: () -> Unit,
+    onAddLabour: (LabourItemRequest) -> Unit,
+    onDeleteLabour: (Long) -> Unit,
+    onAddPart: (PartItemRequest) -> Unit,
+    onDeletePart: (Long) -> Unit,
+    onAddAncillary: (AncillaryItemRequest) -> Unit,
+    onDeleteAncillary: (Long) -> Unit
 ) {
+    // Dialog states
+    var showAddLabour    by remember { mutableStateOf(false) }
+    var showAddPart      by remember { mutableStateOf(false) }
+    var showAddAncillary by remember { mutableStateOf(false) }
+
     FileSaver(
         bytes    = pdfBytes,
         fileName = pdfFileName,
         onSaved  = onPdfSaved,
         onError  = onPdfSaveError
     )
+
+    // ── Add Labour dialog ─────────────────────────────────────────────────────
+    if (showAddLabour) {
+        var desc by remember { mutableStateOf("") }
+        var type by remember { mutableStateOf("LABOUR") }
+        var qty  by remember { mutableStateOf("1") }
+        var rate by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddLabour = false },
+            title = { Text("Add Labour") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = type, onValueChange = { type = it }, label = { Text("Type (LABOUR / EXTERNAL)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = qty,  onValueChange = { qty  = it }, label = { Text("Qty") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = rate, onValueChange = { rate = it }, label = { Text("Rate") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val q = qty.toIntOrNull() ?: 1
+                    val r = rate.toDoubleOrNull() ?: 0.0
+                    if (desc.isNotBlank() && r > 0) {
+                        onAddLabour(LabourItemRequest(description = desc, type = type.ifBlank { "LABOUR" }, quantity = q, rate = r))
+                        showAddLabour = false
+                    }
+                }) { Text("Add") }
+            },
+            dismissButton = { TextButton(onClick = { showAddLabour = false }) { Text("Cancel") } }
+        )
+    }
+
+    // ── Add Part dialog ───────────────────────────────────────────────────────
+    if (showAddPart) {
+        var partNo   by remember { mutableStateOf("") }
+        var desc     by remember { mutableStateOf("") }
+        var partType by remember { mutableStateOf("OEM") }
+        var qty      by remember { mutableStateOf("1") }
+        var price    by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddPart = false },
+            title = { Text("Add Part") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = partNo,   onValueChange = { partNo   = it }, label = { Text("Part Number") },               singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = desc,     onValueChange = { desc     = it }, label = { Text("Description") },               singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = partType, onValueChange = { partType = it }, label = { Text("Type (OEM / AFTERMARKET)") },   singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = qty,      onValueChange = { qty      = it }, label = { Text("Qty") },                       singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = price,    onValueChange = { price    = it }, label = { Text("Unit Price") },                singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val q = qty.toIntOrNull() ?: 1
+                    val p = price.toDoubleOrNull() ?: 0.0
+                    if (desc.isNotBlank() && p > 0) {
+                        onAddPart(PartItemRequest(partNumber = partNo, description = desc, partType = partType.ifBlank { "OEM" }, quantity = q, unitPrice = p))
+                        showAddPart = false
+                    }
+                }) { Text("Add") }
+            },
+            dismissButton = { TextButton(onClick = { showAddPart = false }) { Text("Cancel") } }
+        )
+    }
+
+    // ── Add Ancillary dialog ──────────────────────────────────────────────────
+    if (showAddAncillary) {
+        var desc   by remember { mutableStateOf("") }
+        var amount by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddAncillary = false },
+            title = { Text("Add Ancillary") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = desc,   onValueChange = { desc   = it }, label = { Text("Description") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text("Amount") },      singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val a = amount.toDoubleOrNull() ?: 0.0
+                    if (desc.isNotBlank() && a > 0) {
+                        onAddAncillary(AncillaryItemRequest(description = desc, amount = a))
+                        showAddAncillary = false
+                    }
+                }) { Text("Add") }
+            },
+            dismissButton = { TextButton(onClick = { showAddAncillary = false }) { Text("Cancel") } }
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text(jobCard?.jobCardNumber ?: "Job Card") },
@@ -255,8 +371,18 @@ private fun JobCardDetailContent(
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
+            },
+            actions = {
+                IconButton(onClick = onDownloadBill, enabled = !isDownloadingPdf && jobCard != null) {
+                    if (isDownloadingPdf)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else
+                        Icon(Icons.Default.Download, contentDescription = "Download Bill")
+                }
             }
         )
+
+        if (isUpdating) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
 
         when {
             isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -320,15 +446,23 @@ private fun JobCardDetailContent(
                 }
 
                 // Labour items
-                if (jobCard.labourItems.isNotEmpty()) {
-                    DetailSection("Labour / Work Done") {
+                EditableSection(
+                    title    = "Labour / Work Done",
+                    onAddClick = { showAddLabour = true }
+                ) {
+                    if (jobCard.labourItems.isEmpty()) {
+                        Text("No labour items yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    } else {
                         jobCard.labourItems.forEach { l ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(l.description, style = MaterialTheme.typography.bodyMedium)
                                     Text("${l.type}  ×${l.quantity} @ ₹${l.rate}", style = MaterialTheme.typography.bodySmall)
                                 }
                                 Text("₹${l.amount}", style = MaterialTheme.typography.bodyMedium)
+                                IconButton(onClick = { onDeleteLabour(l.id) }, enabled = !isUpdating) {
+                                    Icon(Icons.Default.Close, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                }
                             }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         }
@@ -336,15 +470,23 @@ private fun JobCardDetailContent(
                 }
 
                 // Parts
-                if (jobCard.parts.isNotEmpty()) {
-                    DetailSection("Parts Used") {
+                EditableSection(
+                    title    = "Parts Used",
+                    onAddClick = { showAddPart = true }
+                ) {
+                    if (jobCard.parts.isEmpty()) {
+                        Text("No parts yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    } else {
                         jobCard.parts.forEach { p ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text("${p.partNumber}  •  ${p.description}", style = MaterialTheme.typography.bodyMedium)
                                     Text("${p.partType}  ×${p.quantity} @ ₹${p.unitPrice}", style = MaterialTheme.typography.bodySmall)
                                 }
                                 Text("₹${p.totalPrice}", style = MaterialTheme.typography.bodyMedium)
+                                IconButton(onClick = { onDeletePart(p.id) }, enabled = !isUpdating) {
+                                    Icon(Icons.Default.Close, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                }
                             }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         }
@@ -352,12 +494,20 @@ private fun JobCardDetailContent(
                 }
 
                 // Ancillary
-                if (jobCard.ancillaryItems.isNotEmpty()) {
-                    DetailSection("Ancillary Services") {
+                EditableSection(
+                    title    = "Ancillary Services",
+                    onAddClick = { showAddAncillary = true }
+                ) {
+                    if (jobCard.ancillaryItems.isEmpty()) {
+                        Text("No ancillary items yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    } else {
                         jobCard.ancillaryItems.forEach { a ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(a.description, style = MaterialTheme.typography.bodyMedium)
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(a.description, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                                 Text("₹${a.amount}", style = MaterialTheme.typography.bodyMedium)
+                                IconButton(onClick = { onDeleteAncillary(a.id) }, enabled = !isUpdating) {
+                                    Icon(Icons.Default.Close, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                }
                             }
                         }
                     }
@@ -403,18 +553,20 @@ private fun JobCardDetailContent(
                 }
 
                 // Invoices
-                if (invoices.isNotEmpty() || invoiceError != null) {
-                    DetailSection("Invoices") {
-                        invoiceError?.let {
-                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                DetailSection("Invoices") {
+                    invoiceError?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                    pdfSaveMessage?.let {
+                        Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                        LaunchedEffect(it) {
+                            kotlinx.coroutines.delay(3000)
+                            onClearPdfMessage()
                         }
-                        pdfSaveMessage?.let {
-                            Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
-                            LaunchedEffect(it) {
-                                kotlinx.coroutines.delay(3000)
-                                onClearPdfMessage()
-                            }
-                        }
+                    }
+                    if (invoices.isEmpty()) {
+                        Text("No invoices attached.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    } else {
                         invoices.forEach { inv ->
                             Row(
                                 Modifier.fillMaxWidth(),
@@ -429,13 +581,13 @@ private fun JobCardDetailContent(
                                     if (inv.grandTotal != null) Text("₹${inv.grandTotal}", style = MaterialTheme.typography.bodyMedium)
                                     Spacer(Modifier.width(8.dp))
                                     IconButton(
-                                        onClick = { onDownloadPdf(inv.id, inv.invoiceNumber) },
+                                        onClick = { onDownloadInvoicePdf(inv.id, inv.invoiceNumber) },
                                         enabled = !isDownloadingPdf
                                     ) {
                                         if (isDownloadingPdf)
                                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                                         else
-                                            Icon(Icons.Default.Download, contentDescription = "Download PDF", tint = MaterialTheme.colorScheme.primary)
+                                            Icon(Icons.Default.Download, contentDescription = "Download Invoice PDF", tint = MaterialTheme.colorScheme.primary)
                                     }
                                 }
                             }
@@ -446,6 +598,26 @@ private fun JobCardDetailContent(
 
                 Spacer(Modifier.height(24.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun EditableSection(
+    title: String,
+    onAddClick: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                IconButton(onClick = onAddClick, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(18.dp))
+                }
+            }
+            HorizontalDivider()
+            content()
         }
     }
 }

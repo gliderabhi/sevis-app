@@ -2,10 +2,13 @@ package com.sevis.app.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sevis.app.data.model.AncillaryItemRequest
 import com.sevis.app.data.model.CreateJobCardRequest
 import com.sevis.app.data.model.InvoiceDetail
 import com.sevis.app.data.model.JobCardDetail
 import com.sevis.app.data.model.JobCardSummary
+import com.sevis.app.data.model.LabourItemRequest
+import com.sevis.app.data.model.PartItemRequest
 import com.sevis.app.data.repository.InvoiceRepository
 import com.sevis.app.data.repository.JobCardRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +30,7 @@ data class JobCardState(
     val isLoading: Boolean = false,
     val isCreating: Boolean = false,
     val isUploadingInvoice: Boolean = false,
+    val isUpdating: Boolean = false,
     val isDownloadingPdf: Boolean = false,
     val pdfBytes: ByteArray? = null,
     val pdfFileName: String = "",
@@ -124,6 +128,79 @@ class JobCardViewModel(
                 }
         }
     }
+
+    // ── Download bill from job card ───────────────────────────────────────────
+
+    fun downloadJobCardPdf(jobCardId: Long, jobCardNumber: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isDownloadingPdf = true) }
+            repository.downloadPdf(jobCardId)
+                .onSuccess { bytes -> _state.update { it.copy(isDownloadingPdf = false, pdfBytes = bytes, pdfFileName = "bill-$jobCardNumber.pdf") } }
+                .onFailure { e  -> _state.update { it.copy(isDownloadingPdf = false, error = e.message ?: "Download failed") } }
+        }
+    }
+
+    // ── Edit: Labour ──────────────────────────────────────────────────────────
+
+    fun addLabour(jobCardId: Long, req: LabourItemRequest) {
+        viewModelScope.launch {
+            _state.update { it.copy(isUpdating = true) }
+            repository.addLabour(jobCardId, req)
+                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to add labour") } }
+        }
+    }
+
+    fun deleteLabour(jobCardId: Long, labourId: Long) {
+        viewModelScope.launch {
+            _state.update { it.copy(isUpdating = true) }
+            repository.deleteLabour(jobCardId, labourId)
+                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to delete labour") } }
+        }
+    }
+
+    // ── Edit: Parts ───────────────────────────────────────────────────────────
+
+    fun addPart(jobCardId: Long, req: PartItemRequest) {
+        viewModelScope.launch {
+            _state.update { it.copy(isUpdating = true) }
+            repository.addPart(jobCardId, req)
+                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to add part") } }
+        }
+    }
+
+    fun deletePart(jobCardId: Long, partId: Long) {
+        viewModelScope.launch {
+            _state.update { it.copy(isUpdating = true) }
+            repository.deletePart(jobCardId, partId)
+                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to delete part") } }
+        }
+    }
+
+    // ── Edit: Ancillary ───────────────────────────────────────────────────────
+
+    fun addAncillary(jobCardId: Long, req: AncillaryItemRequest) {
+        viewModelScope.launch {
+            _state.update { it.copy(isUpdating = true) }
+            repository.addAncillary(jobCardId, req)
+                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to add item") } }
+        }
+    }
+
+    fun deleteAncillary(jobCardId: Long, ancId: Long) {
+        viewModelScope.launch {
+            _state.update { it.copy(isUpdating = true) }
+            repository.deleteAncillary(jobCardId, ancId)
+                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to delete item") } }
+        }
+    }
+
+    // ── Download invoice PDF ──────────────────────────────────────────────────
 
     fun downloadInvoicePdf(invoiceId: Long, invoiceNumber: String) {
         viewModelScope.launch {
