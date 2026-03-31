@@ -364,14 +364,7 @@ private fun JobCardDetailContent(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
             },
-            actions = {
-                IconButton(onClick = onDownloadBill, enabled = !isDownloadingPdf && jobCard != null) {
-                    if (isDownloadingPdf)
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    else
-                        Icon(Icons.Default.Download, contentDescription = "Download Bill")
-                }
-            }
+            actions = {}
         )
 
         if (isUpdating) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -405,6 +398,27 @@ private fun JobCardDetailContent(
                         Button(onClick = { onStatusUpdate(next) }) {
                             Text("Mark ${next.replace("_", " ")}")
                         }
+                    }
+                }
+
+                // Download Bill button
+                ElevatedButton(
+                    onClick = onDownloadBill,
+                    enabled = !isDownloadingPdf,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.elevatedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor   = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    if (isDownloadingPdf) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Generating Bill…")
+                    } else {
+                        Icon(Icons.Default.Download, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Download Bill", style = MaterialTheme.typography.titleSmall)
                     }
                 }
 

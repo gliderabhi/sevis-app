@@ -1,5 +1,6 @@
 package com.sevis.app.di
 
+import com.sevis.app.data.remote.AuditApiService
 import com.sevis.app.data.remote.AuthApiService
 import com.sevis.app.data.remote.BillingApiService
 import com.sevis.app.data.remote.InventoryApiService
@@ -10,6 +11,7 @@ import com.sevis.app.data.remote.PartApiService
 import com.sevis.app.data.remote.StockApiService
 import com.sevis.app.data.remote.UserApiService
 import com.sevis.app.data.remote.createHttpClient
+import com.sevis.app.data.repository.AuditRepository
 import com.sevis.app.data.repository.AuthRepository
 import com.sevis.app.data.repository.BillingRepository
 import com.sevis.app.data.repository.InventoryRepository
@@ -19,6 +21,7 @@ import com.sevis.app.data.repository.OrdersRepository
 import com.sevis.app.data.repository.PartRepository
 import com.sevis.app.data.repository.StockRepository
 import com.sevis.app.data.repository.UserRepository
+import com.sevis.app.presentation.viewmodel.AuditViewModel
 import com.sevis.app.presentation.viewmodel.AuthViewModel
 import com.sevis.app.presentation.viewmodel.BillingViewModel
 import com.sevis.app.presentation.viewmodel.InventoryViewModel
@@ -44,6 +47,7 @@ val apiModule = module {
     single { StockApiService(get()) }
     single { JobCardApiService(get()) }
     single { InvoiceApiService(get()) }
+    single { AuditApiService(get()) }
 }
 
 val repositoryModule = module {
@@ -56,6 +60,7 @@ val repositoryModule = module {
     single { StockRepository(get()) }
     single { JobCardRepository(get()) }
     single { InvoiceRepository(get()) }
+    single { AuditRepository(get()) }
 }
 
 val viewModelModule = module {
@@ -67,6 +72,7 @@ val viewModelModule = module {
     viewModel { PartsViewModel(get()) }
     viewModel { StockViewModel(get()) }
     viewModel { JobCardViewModel(get(), get(), get()) }
+    viewModel { AuditViewModel(get()) }
 }
 
 val appModules = listOf(networkModule, apiModule, repositoryModule, viewModelModule)

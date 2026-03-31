@@ -6,6 +6,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.sevis.app.data.auth.TokenManager
+import com.sevis.app.presentation.screens.AuditScreen
 import com.sevis.app.presentation.screens.BillingScreen
 import com.sevis.app.presentation.screens.InventoryScreen
 import com.sevis.app.presentation.screens.OrdersScreen
@@ -40,7 +42,8 @@ enum class MainScreen(val label: String) {
     Users("Accounts"),
     Inventory("Inventory"),
     Orders("Job Cards"),
-    Billing("Billing")
+    Billing("Billing"),
+    Audit("Audit")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -130,6 +133,12 @@ fun App() {
                             icon = { Icon(Icons.Default.Receipt, contentDescription = null) },
                             label = { Text(MainScreen.Billing.label) }
                         )
+                        NavigationBarItem(
+                            selected = currentScreen == MainScreen.Audit,
+                            onClick = { currentScreen = MainScreen.Audit },
+                            icon = { Icon(Icons.Default.Assessment, contentDescription = null) },
+                            label = { Text(MainScreen.Audit.label) }
+                        )
                     }
                 }
             ) { innerPadding ->
@@ -138,6 +147,7 @@ fun App() {
                     MainScreen.Inventory -> InventoryScreen(modifier = Modifier.padding(innerPadding))
                     MainScreen.Orders -> OrdersScreen(modifier = Modifier.padding(innerPadding))
                     MainScreen.Billing -> BillingScreen(modifier = Modifier.padding(innerPadding))
+                    MainScreen.Audit -> AuditScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
         }

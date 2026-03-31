@@ -179,7 +179,10 @@ class JobCardViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isUpdating = true) }
             repository.addLabour(jobCardId, req)
-                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onSuccess { updated ->
+                    _state.update { it.copy(isUpdating = false, selectedJobCard = updated) }
+                    loadInvoices(jobCardId)
+                }
                 .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to add labour") } }
         }
     }
@@ -188,7 +191,10 @@ class JobCardViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isUpdating = true) }
             repository.deleteLabour(jobCardId, labourId)
-                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onSuccess { updated ->
+                    _state.update { it.copy(isUpdating = false, selectedJobCard = updated) }
+                    loadInvoices(jobCardId)
+                }
                 .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to delete labour") } }
         }
     }
@@ -199,7 +205,10 @@ class JobCardViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isUpdating = true) }
             repository.addPart(jobCardId, req)
-                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onSuccess { updated ->
+                    _state.update { it.copy(isUpdating = false, selectedJobCard = updated) }
+                    loadInvoices(jobCardId)
+                }
                 .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to add part") } }
         }
     }
@@ -208,7 +217,10 @@ class JobCardViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isUpdating = true) }
             repository.deletePart(jobCardId, partId)
-                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onSuccess { updated ->
+                    _state.update { it.copy(isUpdating = false, selectedJobCard = updated) }
+                    loadInvoices(jobCardId)
+                }
                 .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to delete part") } }
         }
     }
@@ -219,7 +231,10 @@ class JobCardViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isUpdating = true) }
             repository.addAncillary(jobCardId, req)
-                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onSuccess { updated ->
+                    _state.update { it.copy(isUpdating = false, selectedJobCard = updated) }
+                    loadInvoices(jobCardId)
+                }
                 .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to add item") } }
         }
     }
@@ -228,7 +243,10 @@ class JobCardViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isUpdating = true) }
             repository.deleteAncillary(jobCardId, ancId)
-                .onSuccess { updated -> _state.update { it.copy(isUpdating = false, selectedJobCard = updated) } }
+                .onSuccess { updated ->
+                    _state.update { it.copy(isUpdating = false, selectedJobCard = updated) }
+                    loadInvoices(jobCardId)
+                }
                 .onFailure { e -> _state.update { it.copy(isUpdating = false, error = e.message ?: "Failed to delete item") } }
         }
     }
