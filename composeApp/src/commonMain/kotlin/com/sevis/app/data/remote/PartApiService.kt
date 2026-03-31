@@ -30,6 +30,16 @@ class PartApiService(private val client: HttpClient) {
         return safeCall(response)
     }
 
+    // ✅ SEARCH
+    suspend fun search(query: String): List<Part> {
+        val response = client.get("${Environment.baseUrl}/inventory-service/api/parts/search") {
+            bearerAuth()
+            parameter("q", query)
+            parameter("size", 20)
+        }
+        return safeCall(response)
+    }
+
     // ✅ IMPORT BATCH
     suspend fun importBatch(rows: List<PartBatchRow>): ImportResult {
         val response = client.post("${Environment.baseUrl}/inventory-service/api/parts/batch") {

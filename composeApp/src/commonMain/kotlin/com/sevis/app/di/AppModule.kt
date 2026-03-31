@@ -66,7 +66,7 @@ val viewModelModule = module {
     viewModel { OrdersViewModel(get()) }
     viewModel { PartsViewModel(get()) }
     viewModel { StockViewModel(get()) }
-    viewModel { JobCardViewModel(get(), get()) }
+    viewModel { JobCardViewModel(get(), get(), get()) }
 }
 
 val appModules = listOf(networkModule, apiModule, repositoryModule, viewModelModule)

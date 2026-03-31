@@ -23,6 +23,7 @@ import com.sevis.app.data.model.InvoiceDetail
 import com.sevis.app.data.model.JobCardDetail
 import com.sevis.app.data.model.JobCardSummary
 import com.sevis.app.data.model.LabourItemRequest
+import com.sevis.app.data.model.Part
 import com.sevis.app.data.model.PartItemRequest
 import com.sevis.app.presentation.util.FilePicker
 import com.sevis.app.presentation.util.FileSaver
@@ -70,6 +71,8 @@ fun OrdersScreen(
             isLoading        = state.isLoading,
             isUpdating       = state.isUpdating,
             isGeneratingInvoice = state.isGeneratingInvoice,
+            isSearchingParts = state.isSearchingParts,
+            partSearchResults = state.partSearchResults,
             isDownloadingPdf = state.isDownloadingPdf,
             pdfBytes         = state.pdfBytes,
             pdfFileName      = state.pdfFileName,
@@ -84,7 +87,9 @@ fun OrdersScreen(
             onPdfSaveError   = { viewModel.onPdfSaveError(it) },
             onClearPdfMessage   = { viewModel.clearPdfMessage() },
             onClearInvoiceError = { viewModel.clearInvoiceError() },
-            onGenerateInvoice = { viewModel.generateInvoice(screen.jobCardId) },
+            onGenerateInvoice  = { viewModel.generateInvoice(screen.jobCardId) },
+            onSearchParts      = { q -> viewModel.searchParts(q) },
+            onClearPartSearch  = { viewModel.clearPartSearch() },
             onAddLabour      = { req -> viewModel.addLabour(screen.jobCardId, req) },
             onDeleteLabour   = { lid -> viewModel.deleteLabour(screen.jobCardId, lid) },
             onAddPart        = { req -> viewModel.addPart(screen.jobCardId, req) },
@@ -244,6 +249,8 @@ private fun JobCardDetailContent(
     isLoading: Boolean,
     isUpdating: Boolean,
     isGeneratingInvoice: Boolean,
+    isSearchingParts: Boolean,
+    partSearchResults: List<Part>,
     isDownloadingPdf: Boolean,
     pdfBytes: ByteArray?,
     pdfFileName: String,
@@ -259,6 +266,8 @@ private fun JobCardDetailContent(
     onClearPdfMessage: () -> Unit,
     onClearInvoiceError: () -> Unit,
     onGenerateInvoice: () -> Unit,
+    onSearchParts: (String) -> Unit,
+    onClearPartSearch: () -> Unit,
     onAddLabour: (LabourItemRequest) -> Unit,
     onDeleteLabour: (Long) -> Unit,
     onAddPart: (PartItemRequest) -> Unit,
@@ -311,34 +320,13 @@ private fun JobCardDetailContent(
 
     // ── Add Part dialog ───────────────────────────────────────────────────────
     if (showAddPart) {
-        var partNo   by remember { mutableStateOf("") }
-        var desc     by remember { mutableStateOf("") }
-        var partType by remember { mutableStateOf("OEM") }
-        var qty      by remember { mutableStateOf("1") }
-        var price    by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showAddPart = false },
-            title = { Text("Add Part") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = partNo,   onValueChange = { partNo   = it }, label = { Text("Part Number") },               singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = desc,     onValueChange = { desc     = it }, label = { Text("Description") },               singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = partType, onValueChange = { partType = it }, label = { Text("Type (OEM / AFTERMARKET)") },   singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = qty,      onValueChange = { qty      = it }, label = { Text("Qty") },                       singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = price,    onValueChange = { price    = it }, label = { Text("Unit Price") },                singleLine = true, modifier = Modifier.fillMaxWidth())
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val q = qty.toIntOrNull() ?: 1
-                    val p = price.toDoubleOrNull() ?: 0.0
-                    if (desc.isNotBlank() && p > 0) {
-                        onAddPart(PartItemRequest(partNumber = partNo, description = desc, partType = partType.ifBlank { "OEM" }, quantity = q, unitPrice = p))
-                        showAddPart = false
-                    }
-                }) { Text("Add") }
-            },
-            dismissButton = { TextButton(onClick = { showAddPart = false }) { Text("Cancel") } }
+        AddPartDialog(
+            isSearchingParts   = isSearchingParts,
+            partSearchResults  = partSearchResults,
+            onSearchParts      = onSearchParts,
+            onClearPartSearch  = onClearPartSearch,
+            onConfirm          = { req -> onAddPart(req); showAddPart = false },
+            onDismiss          = { showAddPart = false; onClearPartSearch() }
         )
     }
 
@@ -628,6 +616,131 @@ private fun JobCardDetailContent(
             }
         }
     }
+}
+
+// ── Add Part dialog with search ───────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddPartDialog(
+    isSearchingParts: Boolean,
+    partSearchResults: List<Part>,
+    onSearchParts: (String) -> Unit,
+    onClearPartSearch: () -> Unit,
+    onConfirm: (PartItemRequest) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var search   by remember { mutableStateOf("") }
+    var partNo   by remember { mutableStateOf("") }
+    var desc     by remember { mutableStateOf("") }
+    var partType by remember { mutableStateOf("OEM") }
+    var qty      by remember { mutableStateOf("1") }
+    var price    by remember { mutableStateOf("") }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    // Debounced search — fires 400ms after typing stops if 3+ chars
+    LaunchedEffect(search) {
+        if (search.length >= 3) {
+            kotlinx.coroutines.delay(400)
+            onSearchParts(search)
+            dropdownExpanded = true
+        } else {
+            onClearPartSearch()
+            dropdownExpanded = false
+        }
+    }
+
+    // Open dropdown when results arrive
+    LaunchedEffect(partSearchResults) {
+        if (partSearchResults.isNotEmpty()) dropdownExpanded = true
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Part") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                // ── Search field with dropdown ─────────────────────────────
+                ExposedDropdownMenuBox(
+                    expanded = dropdownExpanded && partSearchResults.isNotEmpty(),
+                    onExpandedChange = { dropdownExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = search,
+                        onValueChange = { search = it; partNo = it },
+                        label = { Text("Search Part No / Description") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        trailingIcon = {
+                            if (isSearchingParts)
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            else if (search.isNotEmpty())
+                                IconButton(onClick = { search = ""; partNo = ""; onClearPartSearch(); dropdownExpanded = false }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                                }
+                        }
+                    )
+                    ExposedDropdownMenu(
+                        expanded = dropdownExpanded && partSearchResults.isNotEmpty(),
+                        onDismissRequest = { dropdownExpanded = false }
+                    ) {
+                        partSearchResults.forEach { part ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(part.partNumber, style = MaterialTheme.typography.bodyMedium)
+                                        Text(part.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                    }
+                                },
+                                trailingIcon = {
+                                    Text("₹${part.mrpPrice}", style = MaterialTheme.typography.labelSmall)
+                                },
+                                onClick = {
+                                    search   = part.partNumber
+                                    partNo   = part.partNumber
+                                    desc     = part.description
+                                    price    = part.mrpPrice.toString()
+                                    dropdownExpanded = false
+                                    onClearPartSearch()
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (search.length < 3) {
+                    Text(
+                        "Type 3+ characters to search parts",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+
+                // ── Other fields ───────────────────────────────────────────
+                OutlinedTextField(value = desc,     onValueChange = { desc     = it }, label = { Text("Description") },             singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = partType, onValueChange = { partType = it }, label = { Text("Type (OEM / AFTERMARKET)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = qty,      onValueChange = { qty      = it }, label = { Text("Qty") },                     singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = price,    onValueChange = { price    = it }, label = { Text("Unit Price") },              singleLine = true, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val q = qty.toIntOrNull() ?: 1
+                val p = price.toDoubleOrNull() ?: 0.0
+                if (desc.isNotBlank() && p > 0) {
+                    onConfirm(PartItemRequest(
+                        partNumber = partNo.ifBlank { search },
+                        description = desc,
+                        partType = partType.ifBlank { "OEM" },
+                        quantity = q,
+                        unitPrice = p
+                    ))
+                }
+            }) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable

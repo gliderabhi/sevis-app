@@ -14,6 +14,9 @@ class PartRepository(private val api: PartApiService) {
     suspend fun getById(id: Long): Result<Part> =
         runCatching { api.getById(id) }
 
+    suspend fun search(query: String): Result<List<Part>> =
+        runCatching { api.search(query) }
+
     suspend fun importBatch(rows: List<PartBatchRow>): Result<ImportResult> =
         runCatching { api.importBatch(rows) }
 }

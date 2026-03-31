@@ -8,9 +8,11 @@ import com.sevis.app.data.model.InvoiceDetail
 import com.sevis.app.data.model.JobCardDetail
 import com.sevis.app.data.model.JobCardSummary
 import com.sevis.app.data.model.LabourItemRequest
+import com.sevis.app.data.model.Part
 import com.sevis.app.data.model.PartItemRequest
 import com.sevis.app.data.repository.InvoiceRepository
 import com.sevis.app.data.repository.JobCardRepository
+import com.sevis.app.data.repository.PartRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +34,8 @@ data class JobCardState(
     val isUploadingInvoice: Boolean = false,
     val isGeneratingInvoice: Boolean = false,
     val isUpdating: Boolean = false,
+    val isSearchingParts: Boolean = false,
+    val partSearchResults: List<Part> = emptyList(),
     val isDownloadingPdf: Boolean = false,
     val pdfBytes: ByteArray? = null,
     val pdfFileName: String = "",
@@ -43,7 +47,8 @@ data class JobCardState(
 
 class JobCardViewModel(
     private val repository: JobCardRepository,
-    private val invoiceRepository: InvoiceRepository
+    private val invoiceRepository: InvoiceRepository,
+    private val partRepository: PartRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(JobCardState())
@@ -107,6 +112,19 @@ class JobCardViewModel(
                     _state.update { it.copy(isGeneratingInvoice = false, invoiceError = e.message ?: "Failed to generate invoice") }
                 }
         }
+    }
+
+    fun searchParts(query: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isSearchingParts = true) }
+            partRepository.search(query)
+                .onSuccess { results -> _state.update { it.copy(isSearchingParts = false, partSearchResults = results) } }
+                .onFailure { _state.update { it.copy(isSearchingParts = false, partSearchResults = emptyList()) } }
+        }
+    }
+
+    fun clearPartSearch() {
+        _state.update { it.copy(partSearchResults = emptyList(), isSearchingParts = false) }
     }
 
     fun clearInvoiceError() {
