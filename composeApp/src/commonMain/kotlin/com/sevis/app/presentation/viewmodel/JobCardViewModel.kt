@@ -166,10 +166,10 @@ class JobCardViewModel(
 
     fun downloadJobCardPdf(jobCardId: Long, jobCardNumber: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isDownloadingPdf = true) }
+            _state.update { it.copy(isDownloadingPdf = true, invoiceError = null) }
             repository.downloadPdf(jobCardId)
                 .onSuccess { bytes -> _state.update { it.copy(isDownloadingPdf = false, pdfBytes = bytes, pdfFileName = "bill-$jobCardNumber.pdf") } }
-                .onFailure { e  -> _state.update { it.copy(isDownloadingPdf = false, error = e.message ?: "Download failed") } }
+                .onFailure { e  -> _state.update { it.copy(isDownloadingPdf = false, invoiceError = e.message ?: "Failed to download bill") } }
         }
     }
 

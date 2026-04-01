@@ -356,7 +356,19 @@ private fun JobCardDetailContent(
         )
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    // Snackbar state for this detail screen
+    var detailSnackbar by remember { mutableStateOf<String?>(null) }
+    var detailSnackbarIsError by remember { mutableStateOf(false) }
+
+    LaunchedEffect(invoiceError) {
+        if (invoiceError != null) { detailSnackbar = invoiceError; detailSnackbarIsError = true }
+    }
+    LaunchedEffect(pdfSaveMessage) {
+        if (pdfSaveMessage != null) { detailSnackbar = pdfSaveMessage; detailSnackbarIsError = false }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text(jobCard?.jobCardNumber ?: "Job Card") },
             navigationIcon = {
@@ -583,16 +595,6 @@ private fun JobCardDetailContent(
                             }
                         }
                         HorizontalDivider()
-                        invoiceError?.let {
-                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                        }
-                        pdfSaveMessage?.let {
-                            Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
-                            LaunchedEffect(it) {
-                                kotlinx.coroutines.delay(3000)
-                                onClearPdfMessage()
-                            }
-                        }
                         if (invoices.isEmpty()) {
                             Text("No invoices attached.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                         } else {
@@ -630,6 +632,24 @@ private fun JobCardDetailContent(
             }
         }
     }
+
+    // ── Snackbar overlay for this detail screen ───────────────────────────────
+    detailSnackbar?.let { msg ->
+        Snackbar(
+            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+            action = {
+                TextButton(onClick = {
+                    detailSnackbar = null
+                    if (detailSnackbarIsError) onClearInvoiceError() else onClearPdfMessage()
+                }) { Text("Dismiss") }
+            },
+            containerColor = if (detailSnackbarIsError) MaterialTheme.colorScheme.errorContainer
+                             else MaterialTheme.colorScheme.secondaryContainer,
+            contentColor   = if (detailSnackbarIsError) MaterialTheme.colorScheme.onErrorContainer
+                             else MaterialTheme.colorScheme.onSecondaryContainer
+        ) { Text(msg) }
+    }
+    } // end Box
 }
 
 // ── Add Part dialog with search ───────────────────────────────────────────────
